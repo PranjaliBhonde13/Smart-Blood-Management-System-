@@ -1,0 +1,61 @@
+# One-command local/prod-like stack for the Smart Blood Emergency Network.
+#   docker compose up --build
+#
+# Services:
+#   db       - MariaDB (matches the dev database; Flyway migrates on backend boot)
+#   backend  - Spring Boot API (port 8080)
+#   frontend - React SPA via nginx (port 80), proxies /api to backend
+#   mailhog  - captures OTP/notification emails; UI at http://localhost:8025
+name: sben
+
+services:
+  db:
+    image: mariadb:11
+    environment:
+      MARIADB_DATABASE: sben
+      MARIADB_ROOT_PASSWORD: root
+    ports:
+      - "3307:3306"
+    volumes:
+      - db-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  backend:
+    build: ./backend
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:mariadb://db:3306/sben?useSSL=false&serverTimezone=UTC
+      DB_USERNAME: root
+      DB_PASSWORD: root
+      # Real email through MailHog (view messages in its web UI).
+      MAIL_ENABLED: "true"
+      MAIL_HOST: mailhog
+      MAIL_PORT: "1025"
+      JWT_SECRET: c21hcnQtYmxvb2QtZW1lcmdlbmN5LW5ldHdvcmstZGV2LXNlY3JldC1rZXktMjAyNi1jaGFuZ2VtZQ==
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "8080:8080"
+    volumes:
+      - uploads:/app/uploads
+
+  frontend:
+    build: ./frontend
+    depends_on:
+      - backend
+    ports:
+      - "80:80"
+
+  mailhog:
+    image: mailhog/mailhog
+    ports:
+      - "8025:8025"   # web UI
+      - "1025:1025"   # SMTP
+
+volumes:
+  db-data:
+  uploads:

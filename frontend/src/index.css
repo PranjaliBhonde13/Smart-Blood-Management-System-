@@ -1,0 +1,95 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: light dark;
+}
+
+@layer base {
+  body {
+    @apply bg-slate-50 font-sans text-slate-800 antialiased;
+    font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
+  }
+  .dark body {
+    @apply bg-slate-950 text-slate-100;
+  }
+  h1, h2, h3, h4 {
+    @apply font-display tracking-tight;
+  }
+  /* Accessible focus ring for keyboard users across interactive elements. */
+  :where(a, button, input, select, textarea):focus-visible {
+    @apply outline-none ring-2 ring-brand-500/70 ring-offset-2 ring-offset-white dark:ring-offset-slate-950;
+  }
+}
+
+@layer components {
+  /* Frosted-glass surface — the signature look of the app. */
+  .glass {
+    @apply border border-white/60 bg-white/70 backdrop-blur-xl;
+    @apply dark:border-white/10 dark:bg-slate-900/60;
+  }
+  .glass-strong {
+    @apply border border-white/70 bg-white/85 backdrop-blur-2xl;
+    @apply dark:border-white/10 dark:bg-slate-900/80;
+  }
+  /* Gradient text for hero words and emphasis. */
+  .text-gradient {
+    @apply bg-grad-brand bg-clip-text text-transparent;
+  }
+  .text-gradient-ocean {
+    @apply bg-grad-ocean bg-clip-text text-transparent;
+  }
+  /* Skeleton shimmer block for loading states. */
+  .skeleton {
+    @apply relative overflow-hidden rounded-lg bg-slate-200/70 dark:bg-slate-800/70;
+  }
+  .skeleton::after {
+    content: '';
+    @apply absolute inset-0 -translate-x-full;
+    background: linear-gradient(
+      90deg,
+      transparent,
+      rgba(255, 255, 255, 0.55),
+      transparent
+    );
+    animation: shimmer 1.6s infinite;
+  }
+  .dark .skeleton::after {
+    background: linear-gradient(
+      90deg,
+      transparent,
+      rgba(255, 255, 255, 0.06),
+      transparent
+    );
+  }
+}
+
+@layer utilities {
+  /* Ripple container clip for buttons. */
+  .ripple-host {
+    position: relative;
+    overflow: hidden;
+    isolation: isolate;
+  }
+  /* Slim, modern scrollbar. */
+  .scroll-slim::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  .scroll-slim::-webkit-scrollbar-thumb {
+    @apply rounded-full bg-slate-300/70 dark:bg-slate-700/70;
+  }
+  .scroll-slim::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.001ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.001ms !important;
+    }
+  }
+}

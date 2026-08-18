@@ -1,0 +1,28 @@
+# ===== Backend (Maven / Java) =====
+backend/target/
+*.class
+*.jar
+!**/maven-wrapper.jar
+.mvn/wrapper/maven-wrapper.jar
+
+# ===== Frontend (Node / Vite) =====
+frontend/node_modules/
+frontend/dist/
+frontend/.vite/
+npm-debug.log*
+
+# ===== Uploaded files (medical reports) =====
+uploads/
+backend/uploads/
+
+# ===== Env / secrets =====
+.env
+.env.local
+*.local
+
+# ===== IDE / OS =====
+.idea/
+.vscode/
+*.iml
+.DS_Store
+Thumbs.db

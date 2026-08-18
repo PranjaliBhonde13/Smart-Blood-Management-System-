@@ -1,0 +1,77 @@
+# ============================================================
+# Smart Blood Emergency Network — application config
+# Secrets come from environment variables (never commit real values).
+# ============================================================
+spring:
+  application:
+    name: smart-blood-emergency-network
+
+  datasource:
+    # XAMPP (MariaDB) runs on port 3307 with an empty root password by default.
+    url: jdbc:mariadb://localhost:3307/sben?useSSL=false&serverTimezone=UTC
+    username: ${DB_USERNAME:root}
+    password: ${DB_PASSWORD:}
+    driver-class-name: org.mariadb.jdbc.Driver
+
+  jpa:
+    hibernate:
+      # Flyway owns the schema; Hibernate must never alter it.
+      ddl-auto: validate
+    properties:
+      hibernate:
+        format_sql: true
+        # Dialect is auto-detected correctly via the MariaDB driver.
+    open-in-view: false
+    show-sql: false
+
+  flyway:
+    enabled: true
+    baseline-on-migrate: true
+    locations: classpath:db/migration
+
+server:
+  port: 8080
+  servlet:
+    context-path: /
+
+# OpenAPI / Swagger
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
+  api-docs:
+    path: /v3/api-docs
+
+# Actuator health at /actuator/health
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+
+# ----- Mail (real SMTP wired later; MockEmailService logs OTPs in dev) -----
+  mail:
+    host: ${MAIL_HOST:smtp.gmail.com}
+    port: ${MAIL_PORT:587}
+    username: ${MAIL_USERNAME:}
+    password: ${MAIL_PASSWORD:}
+    properties:
+      mail.smtp.auth: true
+      mail.smtp.starttls.enable: true
+
+# ----- Application-specific settings -----
+app:
+  # Base64 256-bit dev secret. OVERRIDE with env JWT_SECRET in production.
+  jwt:
+    secret: ${JWT_SECRET:c21hcnQtYmxvb2QtZW1lcmdlbmN5LW5ldHdvcmstZGV2LXNlY3JldC1rZXktMjAyNi1jaGFuZ2VtZQ==}
+    access-expiration-ms: ${JWT_ACCESS_MS:900000}      # 15 minutes
+    refresh-expiration-ms: ${JWT_REFRESH_MS:604800000} # 7 days
+  otp:
+    expiration-minutes: 10
+    length: 6
+  # When false (dev default) email is logged, not sent. Set true once SMTP is configured.
+  mail-enabled: ${MAIL_ENABLED:false}
+
+logging:
+  level:
+    com.sben: INFO
+    org.flywaydb: INFO
