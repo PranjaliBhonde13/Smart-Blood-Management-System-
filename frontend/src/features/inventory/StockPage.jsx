@@ -12,6 +12,7 @@ import Alert from '../../components/ui/Alert';
 import EmptyState from '../../components/ui/EmptyState';
 import Skeleton from '../../components/ui/Skeleton';
 import { Table, THead, TH, TBody, TR, TD } from '../../components/ui/Table';
+import { formatDate } from '../../lib/format';
 
 const BLOOD_GROUPS = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'];
 const LOW_THRESHOLD = 5; // units at/under which a group is flagged low
@@ -94,8 +95,8 @@ export default function StockPage() {
                         <span className="ml-2 inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-700 dark:bg-amber-900/30"><AlertTriangle className="h-3 w-3" /> Low</span>
                       )}
                     </TD>
-                    <TD className="text-slate-500">{s.expiryDate || '—'}</TD>
-                    <TD className="text-slate-500">{new Date(s.lastUpdated).toLocaleDateString()}</TD>
+                    <TD className="text-slate-500">{formatDate(s.expiryDate)}</TD>
+                    <TD className="text-slate-500">{formatDate(s.lastUpdated)}</TD>
                   </TR>
                 ))}
               </TBody>

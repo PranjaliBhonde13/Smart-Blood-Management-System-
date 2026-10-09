@@ -1,6 +1,6 @@
 import {
   LayoutDashboard, PlusCircle, Droplet, MapPin, Heart, ClipboardList,
-  Package, UserRound, Users, ShieldCheck, ScrollText, BarChart3,
+  Package, UserRound, Users, ShieldCheck, ScrollText, BarChart3, Siren, TrendingUp, Megaphone, UserCheck,
 } from 'lucide-react';
 import { ROLE_HOME } from '../../lib/constants';
 
@@ -42,8 +42,13 @@ export function navForRole(role) {
     ],
     ADMIN: [
       dashboard,
+      { label: 'Requests', to: `${home}/requests`, icon: Siren },
       { label: 'Users', to: `${home}/users`, icon: Users },
       { label: 'Verifications', to: `${home}/verifications`, icon: ShieldCheck },
+      { label: 'Patient verifications', to: `${home}/patient-verifications`, icon: UserCheck },
+      { label: 'Inventory', to: `${home}/inventory`, icon: Package },
+      { label: 'Analytics', to: `${home}/analytics`, icon: TrendingUp },
+      { label: 'Broadcast', to: `${home}/broadcast`, icon: Megaphone },
       { label: 'Audit Log', to: `${home}/audit-logs`, icon: ScrollText },
       { label: 'Reports', to: `${home}/reports`, icon: BarChart3 },
     ],

@@ -16,7 +16,8 @@ import java.util.Map;
 
 /**
  * Authentication & identity endpoints (see docs/04-API.md §2). All routes here
- * are public except {@code /logout} and {@code /me}, which require a valid JWT.
+ * are public except {@code /logout}, {@code /me} and {@code /change-password},
+ * which require a valid JWT.
  */
 @RestController
 @RequestMapping("/api/v1/auth")
@@ -80,6 +81,14 @@ public class AuthController {
     public ApiResponse<Void> resetPassword(@Valid @RequestBody ResetPasswordRequest req) {
         authService.resetPassword(req);
         return ApiResponse.ok("Password updated. Please log in.", null);
+    }
+
+    @Operation(summary = "Change the signed-in user's password (signs out all other sessions)")
+    @PostMapping("/change-password")
+    public ApiResponse<AuthResponse> changePassword(@AuthenticationPrincipal UserPrincipal principal,
+                                                    @Valid @RequestBody ChangePasswordRequest req) {
+        return ApiResponse.ok("Password changed. Other sessions have been signed out.",
+                authService.changePassword(principal.getId(), req));
     }
 
     @Operation(summary = "Get the currently authenticated user")

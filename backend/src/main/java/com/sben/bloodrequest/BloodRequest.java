@@ -54,6 +54,62 @@ public class BloodRequest extends BaseEntity {
     @Column(name = "request_date", nullable = false)
     private LocalDateTime requestDate;
 
+    // ---------- details (V10); NULL on requests created before them ----------
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "request_for", length = 10)
+    private RequestFor requestFor;
+
+    /** Snapshot of the recipient's name/age at creation (the requester's own for SELF). */
+    @Column(name = "recipient_name", length = 100)
+    private String recipientName;
+
+    @Column(name = "recipient_age")
+    private Integer recipientAge;
+
+    /** Requester's relationship to the recipient (OTHER only), e.g. "Father". */
+    @Column(name = "recipient_relationship", length = 50)
+    private String recipientRelationship;
+
+    @Enumerated(EnumType.STRING)
+    @Column(length = 30)
+    private BloodComponent component;
+
+    @Column(name = "required_by")
+    private LocalDateTime requiredBy;
+
+    @Column(name = "preferred_hospital_id")
+    private Long preferredHospitalId;
+
+    @Column(name = "preferred_hospital_name", length = 100)
+    private String preferredHospitalName;
+
+    @Column(name = "location_notes", length = 255)
+    private String locationNotes;
+
+    /** Set by the server at creation; never accepted from the client. */
+    @Enumerated(EnumType.STRING)
+    @Column(name = "blood_group_source", length = 20)
+    private BloodGroupSource bloodGroupSource;
+
+    /** Hospital/admin user who confirmed (or corrected) the requested group. */
+    @Column(name = "blood_group_confirmed_by")
+    private Long bloodGroupConfirmedBy;
+
+    @Column(name = "blood_group_confirmed_at")
+    private LocalDateTime bloodGroupConfirmedAt;
+
+    /**
+     * May this request be approved as far as its blood group is concerned?
+     * Legacy rows (no source) keep the old flow; otherwise the group must come
+     * from a verified profile or have been confirmed by a hospital/admin.
+     */
+    public boolean isBloodGroupApprovable() {
+        return bloodGroupSource == null
+                || bloodGroupSource == BloodGroupSource.PROFILE_VERIFIED
+                || bloodGroupConfirmedAt != null;
+    }
+
     @PrePersist
     void onCreate() {
         if (requestDate == null) requestDate = LocalDateTime.now();

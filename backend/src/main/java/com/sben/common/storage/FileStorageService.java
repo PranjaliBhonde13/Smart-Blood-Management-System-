@@ -10,6 +10,7 @@ import org.springframework.util.StringUtils;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.nio.file.*;
 import java.util.Set;
 import java.util.UUID;
@@ -47,16 +48,31 @@ public class FileStorageService {
 
     /** Persist a file and return the stored (relative) filename to save on the entity. */
     public String store(MultipartFile file) {
+        return store(file, ALLOWED, MAX_BYTES);
+    }
+
+    /**
+     * Persist a file restricted to {@code allowedExtensions} (subset of PDF/PNG/JPG)
+     * and {@code maxBytes}; e.g. logos accept images only.
+     */
+    public String store(MultipartFile file, Set<String> allowedExtensions, long maxBytes) {
         if (file == null || file.isEmpty()) {
             throw new BusinessException("File is empty", HttpStatus.BAD_REQUEST);
         }
-        if (file.getSize() > MAX_BYTES) {
-            throw new BusinessException("File exceeds 5 MB limit", HttpStatus.PAYLOAD_TOO_LARGE);
+        if (file.getSize() > maxBytes) {
+            throw new BusinessException("File exceeds " + (maxBytes / (1024 * 1024)) + " MB limit",
+                    HttpStatus.PAYLOAD_TOO_LARGE);
         }
         String ext = StringUtils.getFilenameExtension(
                 StringUtils.cleanPath(file.getOriginalFilename() == null ? "" : file.getOriginalFilename()));
-        if (ext == null || !ALLOWED.contains(ext.toLowerCase())) {
-            throw new BusinessException("Only PDF, PNG, JPG files are allowed", HttpStatus.UNSUPPORTED_MEDIA_TYPE);
+        if (ext == null || !allowedExtensions.contains(ext.toLowerCase()) || !ALLOWED.contains(ext.toLowerCase())) {
+            String allowed = String.join(", ", allowedExtensions.stream()
+                    .filter(e -> !e.equals("jpeg")).map(String::toUpperCase).sorted().toList());
+            throw new BusinessException("Only " + allowed + " files are allowed", HttpStatus.UNSUPPORTED_MEDIA_TYPE);
+        }
+        if (!contentMatches(file, ext.toLowerCase())) {
+            throw new BusinessException("File content does not match its ." + ext.toLowerCase() + " extension",
+                    HttpStatus.UNSUPPORTED_MEDIA_TYPE);
         }
         String storedName = UUID.randomUUID() + "." + ext.toLowerCase();
         try {
@@ -68,6 +84,36 @@ public class FileStorageService {
             return storedName;
         } catch (IOException e) {
             throw new BusinessException("Failed to store file", HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    /** Checks the file's leading "magic" bytes against the claimed type. */
+    private static boolean contentMatches(MultipartFile file, String ext) {
+        byte[] head = new byte[8];
+        int n;
+        try (InputStream in = file.getInputStream()) {
+            n = in.readNBytes(head, 0, head.length);
+        } catch (IOException e) {
+            return false;
+        }
+        return switch (ext) {
+            case "pdf" -> n >= 4 && head[0] == '%' && head[1] == 'P' && head[2] == 'D' && head[3] == 'F';
+            case "png" -> n >= 8 && (head[0] & 0xFF) == 0x89 && head[1] == 'P' && head[2] == 'N' && head[3] == 'G';
+            case "jpg", "jpeg" -> n >= 3 && (head[0] & 0xFF) == 0xFF && (head[1] & 0xFF) == 0xD8
+                    && (head[2] & 0xFF) == 0xFF;
+            default -> false;
+        };
+    }
+
+    /** Best-effort removal of a previously stored file (e.g. a replaced logo). */
+    public void delete(String filename) {
+        if (filename == null) return;
+        Path file = root.resolve(filename).normalize();
+        if (!file.startsWith(root)) return;
+        try {
+            Files.deleteIfExists(file);
+        } catch (IOException e) {
+            log.warn("Could not delete stored file {}: {}", filename, e.getMessage());
         }
     }
 

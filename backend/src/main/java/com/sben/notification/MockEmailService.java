@@ -20,10 +20,22 @@ public class MockEmailService implements EmailService {
     public void send(String to, String subject, String body) {
         log.info("""
 
-                ┌──────────────── MOCK EMAIL ────────────────
+                ┌──────────────── MOCK EMAIL (PLAIN TEXT) ────────────────
                 │ To     : {}
                 │ Subject: {}
                 │ Body   : {}
-                └─────────────────────────────────────────────""", to, subject, body);
+                └─────────────────────────────────────────────────────────""", to, subject, body);
+    }
+
+    @Override
+    public void sendHtml(String to, String subject, String htmlBody) {
+        log.info("""
+
+                ┌──────────────── MOCK EMAIL (HTML) ────────────────
+                │ To     : {}
+                │ Subject: {}
+                │ Body   : {}
+                └───────────────────────────────────────────────────""", to, subject, htmlBody);
     }
 }
+

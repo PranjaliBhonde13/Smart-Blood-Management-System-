@@ -6,9 +6,11 @@ import com.sben.auth.token.RefreshTokenService;
 import com.sben.auth.token.VerificationToken;
 import com.sben.auth.token.VerificationTokenRepository;
 import com.sben.common.exception.BusinessException;
+import com.sben.common.exception.FieldValidationException;
 import com.sben.common.exception.ResourceNotFoundException;
 import com.sben.notification.EmailService;
 import com.sben.security.JwtService;
+import com.sben.user.Role;
 import com.sben.user.User;
 import com.sben.user.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -25,6 +27,9 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.security.SecureRandom;
 import java.time.LocalDateTime;
+import java.util.EnumSet;
+import java.util.Map;
+import java.util.Set;
 
 /**
  * Orchestrates the full authentication lifecycle: registration, email OTP
@@ -52,6 +57,10 @@ public class AuthService {
 
     private static final SecureRandom RANDOM = new SecureRandom();
 
+    /** Roles anyone may choose at public sign-up. ADMIN is deliberately absent. */
+    private static final Set<Role> SELF_REGISTRABLE =
+            EnumSet.of(Role.PATIENT, Role.DONOR, Role.HOSPITAL, Role.BLOOD_BANK);
+
     @Value("${app.otp.expiration-minutes}") private int otpExpiryMinutes;
     @Value("${app.otp.length}")             private int otpLength;
     @Value("${app.jwt.access-expiration-ms}") private long accessExpirationMs;
@@ -59,6 +68,10 @@ public class AuthService {
     /** Register a user (disabled until OTP verified) and email an OTP. */
     @Transactional
     public void register(RegisterRequest req) {
+        if (!SELF_REGISTRABLE.contains(req.role())) {
+            // Admin accounts are provisioned internally, never via public sign-up.
+            throw new BusinessException("This account type cannot be self-registered", HttpStatus.BAD_REQUEST);
+        }
         if (userRepository.existsByEmail(req.email())) {
             throw new BusinessException("Email already registered", HttpStatus.CONFLICT);
         }
@@ -79,7 +92,9 @@ public class AuthService {
     /** Confirm the email OTP, activating the account. */
     @Transactional
     public void verifyOtp(VerifyOtpRequest req) {
-        User user = getUserByEmail(req.email());
+        // Unknown email gets the same answer as a wrong code (no account enumeration).
+        User user = userRepository.findByEmail(req.email())
+                .orElseThrow(() -> new BusinessException("Invalid or expired code"));
         VerificationToken token = validToken(user.getId(), VerificationToken.Type.EMAIL_OTP, req.otp());
         token.setUsed(true);
         verificationTokenRepository.save(token);
@@ -91,7 +106,9 @@ public class AuthService {
     /** Re-issue an email OTP (e.g. the previous one expired). */
     @Transactional
     public void resendOtp(EmailRequest req) {
-        User user = getUserByEmail(req.email());
+        // Unknown email: succeed silently, exactly like forgot-password.
+        User user = userRepository.findByEmail(req.email()).orElse(null);
+        if (user == null) return;
         if (user.isEmailVerified()) {
             throw new BusinessException("Email already verified");
         }
@@ -105,6 +122,12 @@ public class AuthService {
             authenticationManager.authenticate(
                     new UsernamePasswordAuthenticationToken(req.email(), req.password()));
         } catch (DisabledException e) {
+            User blocked = userRepository.findByEmail(req.email()).orElse(null);
+            if (blocked != null && !blocked.isEnabled()) {
+                throw new BusinessException("Your account has been suspended"
+                        + (blocked.getSuspensionReason() != null ? ": " + blocked.getSuspensionReason() : "")
+                        + ". Contact support if you think this is a mistake.", HttpStatus.FORBIDDEN);
+            }
             throw new BusinessException("Email not verified or account disabled", HttpStatus.FORBIDDEN);
         } catch (BadCredentialsException e) {
             throw new BusinessException("Invalid email or password", HttpStatus.UNAUTHORIZED);
@@ -119,6 +142,10 @@ public class AuthService {
         RefreshToken current = refreshTokenService.verify(req.refreshToken());
         User user = userRepository.findById(current.getUserId())
                 .orElseThrow(() -> new BusinessException("Invalid refresh token", HttpStatus.UNAUTHORIZED));
+        if (!user.isEnabled() || user.isDeleted() || !user.isEmailVerified()) {
+            refreshTokenService.revokeAll(user.getId());
+            throw new BusinessException("Account disabled", HttpStatus.FORBIDDEN);
+        }
         RefreshToken rotated = refreshTokenService.rotate(current);
         return buildAuthResponse(user, rotated.getToken());
     }
@@ -127,6 +154,11 @@ public class AuthService {
     @Transactional
     public void logout(Long userId) {
         refreshTokenService.revokeAll(userId);
+        // Also kill the access token(s) issued so far.
+        userRepository.findById(userId).ifPresent(u -> {
+            u.revokeIssuedTokens();
+            userRepository.save(u);
+        });
     }
 
     /** Start password reset. Always succeeds outwardly to avoid email enumeration. */
@@ -139,14 +171,48 @@ public class AuthService {
     /** Complete password reset with a valid token. */
     @Transactional
     public void resetPassword(ResetPasswordRequest req) {
-        User user = getUserByEmail(req.email());
+        User user = userRepository.findByEmail(req.email())
+                .orElseThrow(() -> new BusinessException("Invalid or expired code"));
         VerificationToken token =
                 validToken(user.getId(), VerificationToken.Type.PASSWORD_RESET, req.token());
         token.setUsed(true);
         verificationTokenRepository.save(token);
         user.setPasswordHash(passwordEncoder.encode(req.newPassword()));
+        user.revokeIssuedTokens();
         userRepository.save(user);
         refreshTokenService.revokeAll(user.getId()); // force re-login everywhere
+    }
+
+    /**
+     * Signed-in user changes their own password. The current password must be
+     * correct. Every previously issued token (other browsers/devices, and this
+     * one) stops working; the caller gets a fresh token pair so this session
+     * stays signed in. The user is emailed that their password changed.
+     */
+    @Transactional
+    public AuthResponse changePassword(Long userId, ChangePasswordRequest req) {
+        User user = userRepository.findById(userId)
+                .filter(u -> !u.isDeleted())
+                .orElseThrow(() -> new BusinessException("Account not found", HttpStatus.UNAUTHORIZED));
+        if (!passwordEncoder.matches(req.currentPassword(), user.getPasswordHash())) {
+            throw new FieldValidationException(Map.of("currentPassword", "Current password is incorrect"));
+        }
+        if (passwordEncoder.matches(req.newPassword(), user.getPasswordHash())) {
+            throw new FieldValidationException(Map.of("newPassword", "New password must be different from your current password"));
+        }
+        user.setPasswordHash(passwordEncoder.encode(req.newPassword()));
+        user.revokeIssuedTokens();
+        userRepository.save(user);
+        refreshTokenService.revokeAll(user.getId()); // sign out every other session
+        try {
+            emailService.send(user.getEmail(), "Your password was changed",
+                    "The password for your Smart Blood Emergency Network account was changed on "
+                            + LocalDateTime.now().withNano(0) + ". If this wasn't you, reset your password "
+                            + "immediately using \"Forgot password\" and contact support.");
+        } catch (Exception e) {
+            log.warn("Password-change email to {} failed: {}", user.getEmail(), e.getMessage());
+        }
+        return buildAuthResponse(user, refreshTokenService.issue(user.getId()).getToken());
     }
 
     public UserSummary currentUser(String email) {
@@ -163,6 +229,8 @@ public class AuthService {
     }
 
     private void issueOtp(User user, VerificationToken.Type type) {
+        // Only the newest code may work: retire any earlier unused ones of this type.
+        verificationTokenRepository.invalidateActive(user.getId(), type);
         String code = generateNumericCode(otpLength);
         VerificationToken token = VerificationToken.builder()
                 .userId(user.getId())
@@ -177,7 +245,7 @@ public class AuthService {
 
     private VerificationToken validToken(Long userId, VerificationToken.Type type, String code) {
         VerificationToken token = verificationTokenRepository
-                .findFirstByUserIdAndTypeAndUsedFalseOrderByCreatedAtDesc(userId, type)
+                .findFirstByUserIdAndTypeAndUsedFalseOrderByIdDesc(userId, type)
                 .orElseThrow(() -> new BusinessException("No active code — request a new one"));
         if (!token.isValid() || !token.getToken().equals(code)) {
             throw new BusinessException("Invalid or expired code");

@@ -27,7 +27,7 @@ export function useGoogleMaps() {
     if (!loadPromise) {
       loadPromise = new Promise((resolve, reject) => {
         const script = document.createElement('script');
-        script.src = `https://maps.googleapis.com/maps/api/js?key=${key}`;
+        script.src = `https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(key)}&v=weekly&libraries=places`;
         script.async = true;
         script.defer = true;
         script.onload = resolve;

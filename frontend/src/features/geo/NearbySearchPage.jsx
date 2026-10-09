@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import {
   MapPin, Navigation, Search, Droplet, Building2, ShieldCheck, Phone,
-  MessageSquare, HeartHandshake, SlidersHorizontal,
+  HeartHandshake, SlidersHorizontal,
 } from 'lucide-react';
 import { useLazyNearbyDonorsQuery, useLazyNearbyBanksQuery } from './geoApi';
 import { useGeolocation } from '../../hooks/useGeolocation';
@@ -32,11 +32,27 @@ export default function NearbySearchPage() {
 
   const update = (k) => (e) => setForm({ ...form, [k]: e.target.value });
 
+  const searchNearby = ({ latitude, longitude }) => {
+    const lat = Number(latitude);
+    const lng = Number(longitude);
+    if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
+      setErr('Use your location before searching.');
+      return;
+    }
+
+    setErr('');
+    const args = { bloodGroup: form.bloodGroup, lat, lng, radiusKm: Number(form.radiusKm) };
+    setCenter({ lat, lng });
+    triggerDonors(args);
+    triggerBanks(args);
+  };
+
   const useMyLocation = async () => {
     try {
       const { latitude, longitude } = await geo.request();
       setForm((f) => ({ ...f, lat: latitude, lng: longitude }));
-      notify.success('Location captured');
+      searchNearby({ latitude, longitude });
+      notify.success('Searching nearby blood banks and donors');
     } catch { /* geo.error surfaces it */ }
   };
 
@@ -92,7 +108,7 @@ export default function NearbySearchPage() {
         {geo.error && <div className="mt-3"><Alert type="error">{geo.error}</Alert></div>}
       </Card>
 
-      {center && <div className="mb-6 overflow-hidden rounded-2xl shadow-card"><MapView center={center} markers={markers} /></div>}
+      {center && <div className="mb-6 overflow-hidden rounded-2xl shadow-card"><MapView center={center} markers={markers} radiusKm={Number(form.radiusKm)} /></div>}
 
       {fetching && (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -121,10 +137,9 @@ export default function NearbySearchPage() {
                         <div className="flex items-center gap-1 text-xs text-slate-500"><MapPin className="h-3.5 w-3.5" /> {d.distanceKm} km away</div>
                       </div>
                     </div>
-                    <div className="mt-auto grid grid-cols-2 gap-2">
-                      <Button size="sm" variant="secondary" leftIcon={<Phone className="h-4 w-4" />} onClick={() => notify.info('Contact sharing is coming soon')}>Call</Button>
-                      <Button size="sm" leftIcon={<HeartHandshake className="h-4 w-4" />} onClick={() => notify.info('Request sent to donor (demo)')}>Request</Button>
-                    </div>
+                    <p className="mt-auto rounded-xl bg-slate-50 px-3 py-2 text-xs text-slate-500 dark:bg-slate-800/50">
+                      Donor contact details stay private. Compatible donors nearby are alerted automatically when a hospital approves your request.
+                    </p>
                   </Card>
                 ))}
               </div>
@@ -159,9 +174,14 @@ export default function NearbySearchPage() {
                       <span className="text-slate-500">Compatible units</span>
                       <span className="font-bold text-ocean-600">{b.compatibleUnits}</span>
                     </div>
-                    <div className="mt-auto grid grid-cols-2 gap-2">
-                      <Button size="sm" variant="secondary" leftIcon={<Phone className="h-4 w-4" />} disabled={!b.phone} onClick={() => b.phone && notify.info(b.phone)}>Call</Button>
-                      <Button size="sm" variant="ocean" leftIcon={<MessageSquare className="h-4 w-4" />} onClick={() => notify.info('Message sent (demo)')}>Contact</Button>
+                    <div className="mt-auto">
+                      {b.phone ? (
+                        <a href={`tel:${b.phone}`} className="flex items-center justify-center gap-2 rounded-xl border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800">
+                          <Phone className="h-4 w-4" /> {b.phone}
+                        </a>
+                      ) : (
+                        <p className="text-center text-xs text-slate-400">No phone number listed</p>
+                      )}
                     </div>
                   </Card>
                 ))}

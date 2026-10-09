@@ -52,7 +52,7 @@ export default function RegisterPage() {
   /** Lightweight per-step gating (does not replace server validation). */
   const canAdvance = () => {
     if (step === 1) return form.fullName.trim().length > 1;
-    if (step === 2) return /\S+@\S+\.\S+/.test(form.email) && form.password.length >= 6;
+    if (step === 2) return /\S+@\S+\.\S+/.test(form.email) && form.password.length >= 8;
     return true;
   };
 
@@ -168,7 +168,7 @@ export default function RegisterPage() {
                 <TextField label="Email address" type="email" icon={Mail} value={form.email} onChange={update('email')}
                            error={err.fieldErrors.email} autoComplete="email" required />
                 <TextField label="Password" type="password" icon={Lock} value={form.password} onChange={update('password')}
-                           error={err.fieldErrors.password} autoComplete="new-password" hint="At least 6 characters." required />
+                           error={err.fieldErrors.password} autoComplete="new-password" hint="8 to 72 characters." required />
               </div>
             )}
 

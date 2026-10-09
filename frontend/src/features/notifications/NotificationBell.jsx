@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { Bell, BellRing, CheckCheck } from 'lucide-react';
+import { formatDateTime } from '../../lib/format';
 import {
   useUnreadCountQuery,
   useNotificationsQuery,
@@ -74,7 +75,7 @@ export default function NotificationBell() {
                     <div className={n.status === 'UNREAD' ? '' : 'pl-4'}>
                       <div className="text-sm font-semibold text-slate-700 dark:text-slate-200">{n.title}</div>
                       <div className="text-xs text-slate-500">{n.message}</div>
-                      <div className="mt-0.5 text-[10px] text-slate-400">{new Date(n.createdAt).toLocaleString()}</div>
+                      <div className="mt-0.5 text-[10px] text-slate-400">{formatDateTime(n.createdAt)}</div>
                     </div>
                   </div>
                 </button>

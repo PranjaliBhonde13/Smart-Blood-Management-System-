@@ -1,6 +1,7 @@
 package com.sben.notification;
 
 import com.sben.common.exception.BusinessException;
+import com.sben.patient.PatientRepository;
 import com.sben.user.User;
 import com.sben.user.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -24,6 +25,7 @@ public class NotificationService {
     private final NotificationRepository repository;
     private final UserRepository userRepository;
     private final EmailService emailService;
+    private final PatientRepository patientRepository;
 
     /**
      * Persist an in-app notification and send a matching email (best-effort:
@@ -35,6 +37,7 @@ public class NotificationService {
                 .userId(userId).title(title).message(message)
                 .type(type).status(Notification.Status.UNREAD)
                 .build());
+        if (type == Notification.Type.REQUEST && patientOptedOutOfEmail(userId)) return; // in-app copy is kept
         userRepository.findById(userId).map(User::getEmail).ifPresent(email -> {
             try {
                 emailService.send(email, title, message);
@@ -42,6 +45,13 @@ public class NotificationService {
                 log.warn("Email notification to {} failed: {}", email, e.getMessage());
             }
         });
+    }
+
+    /** A patient who explicitly declined request-update emails (NULL = not answered = still emailed). */
+    private boolean patientOptedOutOfEmail(Long userId) {
+        return patientRepository.findByUserId(userId)
+                .map(p -> Boolean.FALSE.equals(p.getNotificationConsent()))
+                .orElse(false);
     }
 
     @Transactional(readOnly = true)

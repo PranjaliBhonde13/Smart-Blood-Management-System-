@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Droplet, ShieldCheck, Clock, Users, HeartHandshake } from 'lucide-react';
+import { Droplet, ShieldCheck, Clock } from 'lucide-react';
 import Logo from '../../components/ui/Logo';
 import { fadeUp, stagger } from '../../lib/motion';
 
@@ -13,7 +13,6 @@ import { fadeUp, stagger } from '../../lib/motion';
 const HIGHLIGHTS = [
   { icon: Clock, label: 'Match in under a minute' },
   { icon: ShieldCheck, label: 'Verified & secure profiles' },
-  { icon: Users, label: '12,000+ active donors' },
 ];
 
 export default function AuthLayout({ title, subtitle, children, footer }) {
@@ -55,9 +54,7 @@ export default function AuthLayout({ title, subtitle, children, footer }) {
           </motion.ul>
         </motion.div>
 
-        <div className="relative flex items-center gap-2 text-sm text-white/70">
-          <HeartHandshake className="h-4 w-4" /> © 2026 Smart Blood Emergency Network
-        </div>
+        <div className="relative" />
       </aside>
 
       {/* Form panel */}

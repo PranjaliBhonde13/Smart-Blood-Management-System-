@@ -1,4 +1,5 @@
 import { motion } from 'framer-motion';
+import { Link } from 'react-router-dom';
 import { TrendingUp, TrendingDown } from 'lucide-react';
 
 /**
@@ -45,9 +46,10 @@ export function StatCard({
   iconClass = 'bg-brand-50 text-brand-600 dark:bg-brand-900/30 dark:text-brand-300',
   trend = null, // { dir: 'up'|'down', value: '+12%' }
   className = '',
+  to = null, // optional route: the whole tile becomes a link
 }) {
   const TrendIcon = trend?.dir === 'down' ? TrendingDown : TrendingUp;
-  return (
+  const tile = (
     <Card hover className={`flex items-start justify-between gap-3 ${className}`}>
       <div className="min-w-0">
         <span className="text-sm font-medium text-slate-500">{label}</span>
@@ -69,5 +71,12 @@ export function StatCard({
         </span>
       )}
     </Card>
+  );
+  if (!to) return tile;
+  return (
+    <Link to={to} aria-label={`${label}: ${value ?? ''} — view details`}
+          className="block rounded-2xl focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-brand-500/30">
+      {tile}
+    </Link>
   );
 }

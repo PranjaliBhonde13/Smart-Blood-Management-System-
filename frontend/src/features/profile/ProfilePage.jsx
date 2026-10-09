@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { UserRound, Navigation, Save, ShieldCheck } from 'lucide-react';
+import { UserRound, Navigation, Save } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 import { useGeolocation } from '../../hooks/useGeolocation';
 import { PROFILE_SCHEMA } from './profileSchema';
@@ -14,14 +14,35 @@ import Select from '../../components/ui/Select';
 import Button from '../../components/ui/Button';
 import Alert from '../../components/ui/Alert';
 import Skeleton from '../../components/ui/Skeleton';
+import ProfileSummaryCard from './ProfileSummaryCard';
+import DonorProfilePage from './donor/DonorProfilePage';
+import PatientProfilePage from './patient/PatientProfilePage';
+import HospitalProfilePage from './hospital/HospitalProfilePage';
+
+/** Patients, donors and hospitals have dedicated, sectioned profiles; other roles use the schema-driven form. */
+export default function ProfilePage() {
+  const { role } = useAuth();
+  if (role === 'PATIENT') return <PatientProfilePage />;
+  if (role === 'HOSPITAL') return <HospitalProfilePage />;
+  return role === 'DONOR' ? <DonorProfilePage /> : <SchemaProfilePage />;
+}
 
 /**
- * One profile screen for every role. Renders fields from PROFILE_SCHEMA[role],
+ * Generic profile screen. Renders fields from PROFILE_SCHEMA[role],
  * prefills them from the server, and upserts on save. Geo fields get a
  * "Use my location" helper. Handles loading (skeleton), first-time empty
  * profiles (404 → blank form), success, and validation errors.
  */
-export default function ProfilePage() {
+/** Map a stored value onto a select option case-insensitively (e.g. 'Male' -> 'MALE'). */
+function normaliseOption(field, value) {
+  if (field.type !== 'select' || value === '') return value;
+  const match = field.options
+    .map((o) => (typeof o === 'string' ? o : o.value))
+    .find((v) => String(v).toLowerCase() === String(value).toLowerCase());
+  return match ?? value;
+}
+
+function SchemaProfilePage() {
   const { user, role } = useAuth();
   const schema = PROFILE_SCHEMA[role];
   const resource = schema?.resource;
@@ -36,7 +57,7 @@ export default function ProfilePage() {
   useEffect(() => {
     if (data?.data) {
       const clean = {};
-      schema.fields.forEach((f) => { clean[f.name] = data.data[f.name] ?? ''; });
+      schema.fields.forEach((f) => { clean[f.name] = normaliseOption(f, data.data[f.name] ?? ''); });
       setForm(clean);
     }
   }, [data, schema]);
@@ -80,7 +101,6 @@ export default function ProfilePage() {
   // Profile completion — share of fields that currently have a value.
   const filled = schema.fields.filter((f) => form[f.name] !== '' && form[f.name] != null).length;
   const completion = schema.fields.length ? Math.round((filled / schema.fields.length) * 100) : 0;
-  const initial = user?.fullName?.charAt(0)?.toUpperCase() || '?';
 
   return (
     <div className="mx-auto max-w-3xl">
@@ -88,31 +108,21 @@ export default function ProfilePage() {
                   subtitle="Keep your details current so matching stays accurate." />
 
       {loadError && <Alert type="error">Could not load your profile. Please retry.</Alert>}
+      {role === 'BLOOD_BANK' && data?.data && (
+        data.data.verified ? (
+          <Alert type="success">Verified by an administrator — you're active on the network.</Alert>
+        ) : data.data.rejectionReason ? (
+          <Alert type="error" title="Verification not approved">
+            {data.data.rejectionReason}. Correct your details below and save to resubmit for review.
+          </Alert>
+        ) : (
+          <Alert type="info">Awaiting administrator verification. You'll get a notification once it's reviewed.</Alert>
+        )
+      )}
       <Alert type="error">{err.message}</Alert>
       {geo.error && <Alert type="error">{geo.error}</Alert>}
 
-      {/* Identity + completion header */}
-      <div className="mb-6 overflow-hidden rounded-3xl border border-slate-100 bg-white shadow-card dark:border-slate-800 dark:bg-slate-900">
-        <div className="h-20 bg-grad-brand" />
-        <div className="flex flex-wrap items-end gap-4 px-6 pb-6">
-          <span className="-mt-10 grid h-20 w-20 shrink-0 place-items-center rounded-3xl bg-grad-brand text-2xl font-extrabold text-white shadow-emergency ring-4 ring-white dark:ring-slate-900">{initial}</span>
-          <div className="min-w-0 flex-1">
-            <div className="flex items-center gap-2">
-              <h2 className="truncate text-xl font-bold text-slate-900 dark:text-white">{user?.fullName || 'Your name'}</h2>
-              <span className="inline-flex items-center gap-1 rounded-full bg-ocean-50 px-2 py-0.5 text-xs font-semibold text-ocean-600 dark:bg-ocean-900/30"><ShieldCheck className="h-3.5 w-3.5" /> {ROLE_LABEL[role]}</span>
-            </div>
-            <p className="truncate text-sm text-slate-500">{user?.email}</p>
-          </div>
-          <div className="w-full sm:w-56">
-            <div className="mb-1 flex items-center justify-between text-xs font-medium text-slate-500">
-              <span>Profile completion</span><span className="font-bold text-brand-600">{completion}%</span>
-            </div>
-            <div className="h-2 w-full overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800">
-              <div className="h-full rounded-full bg-grad-brand transition-all duration-500" style={{ width: `${completion}%` }} />
-            </div>
-          </div>
-        </div>
-      </div>
+      <ProfileSummaryCard name={user?.fullName} email={user?.email} roleLabel={ROLE_LABEL[role]} completion={completion} />
 
       <Card>
         {isLoading ? (
@@ -134,7 +144,10 @@ export default function ProfilePage() {
                     <Select label={`${f.label}${f.required ? ' *' : ''}`} value={form[f.name] ?? ''}
                             onChange={update(f.name)} required={f.required} error={err.fieldErrors[f.name]}>
                       <option value="">Select…</option>
-                      {f.options.map((o) => <option key={o} value={o}>{o}</option>)}
+                      {f.options.map((o) => {
+                        const value = typeof o === 'string' ? o : o.value;
+                        return <option key={value} value={value}>{typeof o === 'string' ? o : o.label}</option>;
+                      })}
                     </Select>
                   ) : (
                     <TextField
@@ -154,6 +167,7 @@ export default function ProfilePage() {
           </form>
         )}
       </Card>
+
     </div>
   );
 }

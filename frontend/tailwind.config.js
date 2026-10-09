@@ -1,6 +1,8 @@
 /**
  * Tailwind config — Smart Blood Emergency Network design system.
- * `darkMode: 'class'` toggles dark mode via a class on <html>.
+ * The app is light-only. `darkMode: 'class'` stays on purpose: nothing ever
+ * adds the `dark` class, so `dark:` utilities never apply. Removing it would
+ * fall back to 'media' and switch to dark styles whenever the OS is in dark mode.
  *
  * Design language: premium healthcare — glassmorphism, soft UI, Material 3 /
  * Apple HIG inspiration. Semantic tokens below map to the brand palette so the

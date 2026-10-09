@@ -2,8 +2,9 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Light mode only: native controls never render dark, whatever the OS setting. */
 :root {
-  color-scheme: light dark;
+  color-scheme: light;
 }
 
 @layer base {
@@ -11,15 +12,73 @@
     @apply bg-slate-50 font-sans text-slate-800 antialiased;
     font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
   }
-  .dark body {
-    @apply bg-slate-950 text-slate-100;
-  }
   h1, h2, h3, h4 {
     @apply font-display tracking-tight;
   }
   /* Accessible focus ring for keyboard users across interactive elements. */
   :where(a, button, input, select, textarea):focus-visible {
     @apply outline-none ring-2 ring-brand-500/70 ring-offset-2 ring-offset-white dark:ring-offset-slate-950;
+  }
+  /* Themed radios & checkboxes: soft white/slate when off, medical red when on. */
+  input[type="radio"],
+  input[type="checkbox"] {
+    @apply relative inline-grid shrink-0 cursor-pointer appearance-none place-content-center border-[1.5px] border-slate-300 bg-white transition;
+    @apply hover:border-brand-400 disabled:cursor-not-allowed disabled:opacity-50;
+    @apply dark:border-slate-600 dark:bg-slate-800 dark:hover:border-brand-400;
+    width: 1.125rem;
+    height: 1.125rem;
+  }
+  input[type="radio"] {
+    @apply rounded-full;
+  }
+  input[type="checkbox"] {
+    @apply rounded-md;
+  }
+  input[type="radio"]::before {
+    content: '';
+    @apply h-2 w-2 scale-0 rounded-full bg-white transition-transform duration-150;
+  }
+  input[type="checkbox"]::before {
+    content: '';
+    @apply h-2.5 w-2.5 scale-0 bg-white transition-transform duration-150;
+    clip-path: polygon(14% 44%, 0 65%, 50% 100%, 100% 16%, 80% 0%, 43% 62%);
+  }
+  input[type="radio"]:checked,
+  input[type="checkbox"]:checked {
+    @apply border-brand-600 bg-brand-600 dark:border-brand-500 dark:bg-brand-500;
+  }
+  input[type="radio"]:checked::before,
+  input[type="checkbox"]:checked::before {
+    @apply scale-100;
+  }
+  input[type="radio"]:focus-visible,
+  input[type="checkbox"]:focus-visible {
+    @apply ring-4 ring-brand-500/20 ring-offset-0;
+  }
+  /* Clean number inputs without browser spin arrows. */
+  input[type="number"]::-webkit-inner-spin-button,
+  input[type="number"]::-webkit-outer-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
+  input[type="number"] {
+    -moz-appearance: textfield;
+  }
+  /* Prevent browser autofill from washing out background colors and icon contrast */
+  input:-webkit-autofill,
+  input:-webkit-autofill:hover,
+  input:-webkit-autofill:focus,
+  input:-webkit-autofill:active {
+    -webkit-box-shadow: 0 0 0 30px #ffffff inset !important;
+    -webkit-text-fill-color: #1e293b !important;
+    transition: background-color 5000s ease-in-out 0s;
+  }
+  .dark input:-webkit-autofill,
+  .dark input:-webkit-autofill:hover,
+  .dark input:-webkit-autofill:focus,
+  .dark input:-webkit-autofill:active {
+    -webkit-box-shadow: 0 0 0 30px #0f172a inset !important;
+    -webkit-text-fill-color: #f8fafc !important;
   }
 }
 

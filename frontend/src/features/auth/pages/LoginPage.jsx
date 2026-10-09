@@ -28,7 +28,7 @@ export default function LoginPage() {
     setErr({ message: '', fieldErrors: {} });
     try {
       const res = await login(form).unwrap();
-      dispatch(setCredentials(res.data)); // {accessToken, refreshToken, user}
+      dispatch(setCredentials({ ...res.data, remember })); // {accessToken, refreshToken, user}
       notify.success(`Welcome back, ${res.data.user.fullName?.split(' ')[0] || ''}`);
       // Return to the page they wanted, else their role's home dashboard.
       const dest = location.state?.from?.pathname || ROLE_HOME[res.data.user.role] || '/';
@@ -63,17 +63,6 @@ export default function LoginPage() {
         <Button type="submit" fullWidth size="lg" loading={isLoading}>Sign in</Button>
       </form>
 
-      <div className="my-6 flex items-center gap-3 text-xs font-medium uppercase tracking-wide text-slate-400">
-        <span className="h-px flex-1 bg-slate-200 dark:bg-slate-700" /> or continue with <span className="h-px flex-1 bg-slate-200 dark:bg-slate-700" />
-      </div>
-      <div className="grid grid-cols-2 gap-3">
-        {['Google', 'Apple'].map((p) => (
-          <button key={p} type="button" disabled title="Coming soon"
-                  className="flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white/70 py-2.5 text-sm font-semibold text-slate-600 opacity-70 dark:border-slate-700 dark:bg-slate-900/60 dark:text-slate-300">
-            {p}
-          </button>
-        ))}
-      </div>
     </AuthLayout>
   );
 }

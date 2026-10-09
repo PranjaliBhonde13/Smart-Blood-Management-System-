@@ -12,6 +12,7 @@ import Alert from '../../../components/ui/Alert';
 import EmptyState from '../../../components/ui/EmptyState';
 import Skeleton from '../../../components/ui/Skeleton';
 import { Table, THead, TH, TBody, TR, TD } from '../../../components/ui/Table';
+import { formatDate } from '../../../lib/format';
 
 /**
  * Blood bank view of approved requests it can fulfil directly from stock.
@@ -65,7 +66,7 @@ export default function BankRequestsPage() {
                 <TD><span className="inline-grid h-9 w-9 place-items-center rounded-xl bg-brand-50 font-bold text-brand-600 dark:bg-brand-900/30">{r.bloodGroup}</span></TD>
                 <TD className="font-semibold">{r.unitsRequired}</TD>
                 <TD><UrgencyBadge urgency={r.urgency} /></TD>
-                <TD className="text-slate-500">{new Date(r.requestDate).toLocaleDateString()}</TD>
+                <TD className="text-slate-500">{formatDate(r.requestDate)}</TD>
                 <TD className="text-right">
                   <Button size="sm" className="!px-3 !py-1.5 text-xs" loading={fulfilling} onClick={() => onFulfill(r.id)} leftIcon={<PackageCheck className="h-3.5 w-3.5" />}>
                     Fulfil from stock

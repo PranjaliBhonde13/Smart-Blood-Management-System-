@@ -25,6 +25,10 @@ export const authApi = apiSlice.injectEndpoints({
     resetPassword: builder.mutation({
       query: (body) => ({ url: '/auth/reset-password', method: 'POST', body }),
     }),
+    /** Signed-in user; returns a fresh token pair (all other sessions are signed out). */
+    changePassword: builder.mutation({
+      query: (body) => ({ url: '/auth/change-password', method: 'POST', body }),
+    }),
     getMe: builder.query({
       query: () => '/auth/me',
       providesTags: ['User'],
@@ -39,5 +43,6 @@ export const {
   useLoginMutation,
   useForgotPasswordMutation,
   useResetPasswordMutation,
+  useChangePasswordMutation,
   useGetMeQuery,
 } = authApi;

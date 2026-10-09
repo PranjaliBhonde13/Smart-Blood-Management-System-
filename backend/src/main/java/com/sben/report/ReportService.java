@@ -1,10 +1,12 @@
 package com.sben.report;
 
+import com.sben.bloodbank.BloodBankRepository;
 import com.sben.bloodrequest.BloodRequest;
 import com.sben.bloodrequest.BloodRequestRepository;
 import com.sben.bloodrequest.RequestStatus;
 import com.sben.bloodstock.BloodStockRepository;
 import com.sben.donation.DonationHistory;
+import com.sben.common.exception.BusinessException;
 import com.sben.donation.DonationHistoryRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -24,6 +26,7 @@ public class ReportService {
     private final BloodRequestRepository requestRepository;
     private final DonationHistoryRepository donationRepository;
     private final BloodStockRepository stockRepository;
+    private final BloodBankRepository bloodBankRepository;
 
     @Transactional(readOnly = true)
     public Map<String, Long> requestsSummary() {
@@ -48,7 +51,19 @@ public class ReportService {
     public Map<String, Long> inventorySummary() {
         Map<String, Long> out = new LinkedHashMap<>();
         out.put("totalUnits", stockRepository.totalUnits());
-        out.put("stockLines", stockRepository.count());
+        out.put("stockLines", stockRepository.countByDeletedFalse());
+        return out;
+    }
+
+    /** Inventory summary for one blood bank (its own stock only). */
+    @Transactional(readOnly = true)
+    public Map<String, Long> inventorySummaryForBankUser(Long bankUserId) {
+        Long bankId = bloodBankRepository.findByUserId(bankUserId)
+                .orElseThrow(() -> new BusinessException("Complete your blood bank profile first"))
+                .getId();
+        Map<String, Long> out = new LinkedHashMap<>();
+        out.put("totalUnits", stockRepository.totalUnitsForBank(bankId));
+        out.put("stockLines", stockRepository.countByBloodBankIdAndDeletedFalse(bankId));
         return out;
     }
 

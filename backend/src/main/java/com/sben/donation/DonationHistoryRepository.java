@@ -15,6 +15,17 @@ public interface DonationHistoryRepository extends JpaRepository<DonationHistory
 
     boolean existsByRequestIdAndStatus(Long requestId, DonationHistory.Status status);
 
+    List<DonationHistory> findByRequestIdAndStatus(Long requestId, DonationHistory.Status status);
+
+    /** Most recent donation of this donor with the given status, by donation date. */
+    Optional<DonationHistory> findFirstByDonorIdAndStatusOrderByDonationDateDesc(Long donorId, DonationHistory.Status status);
+
     // --- admin / reports ---
     long countByStatus(DonationHistory.Status status);
+
+    long countByDonorIdAndStatus(Long donorId, DonationHistory.Status status);
+
+    long countByBloodBankIdAndStatus(Long bloodBankId, DonationHistory.Status status);
+
+    List<DonationHistory> findTop20ByDonorIdOrderByCreatedAtDesc(Long donorId);
 }

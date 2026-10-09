@@ -11,36 +11,15 @@ export const PROFILE_SCHEMA = {
     fields: [
       { name: 'bloodGroup', label: 'Blood group', type: 'select', options: BLOOD_GROUPS },
       { name: 'age', label: 'Age', type: 'number' },
-      { name: 'gender', label: 'Gender', type: 'select', options: ['Male', 'Female', 'Other'] },
+      { name: 'gender', label: 'Gender', type: 'select', options: [
+        { value: 'MALE', label: 'Male' }, { value: 'FEMALE', label: 'Female' }, { value: 'OTHER', label: 'Other' },
+      ] },
       { name: 'address', label: 'Address', type: 'text' },
       { name: 'emergencyContact', label: 'Emergency contact', type: 'text' },
     ],
   },
-  DONOR: {
-    resource: 'donors',
-    fields: [
-      { name: 'bloodGroup', label: 'Blood group', type: 'select', options: BLOOD_GROUPS, required: true },
-      { name: 'age', label: 'Age', type: 'number' },
-      { name: 'city', label: 'City', type: 'text' },
-      { name: 'latitude', label: 'Latitude', type: 'number', geo: true },
-      { name: 'longitude', label: 'Longitude', type: 'number', geo: true },
-      { name: 'lastDonationDate', label: 'Last donation date', type: 'date' },
-    ],
-  },
-  HOSPITAL: {
-    resource: 'hospitals',
-    fields: [
-      { name: 'hospitalName', label: 'Hospital name', type: 'text', required: true },
-      { name: 'licenseNumber', label: 'License number', type: 'text', required: true },
-      { name: 'phone', label: 'Phone', type: 'text' },
-      { name: 'address', label: 'Address', type: 'text' },
-      { name: 'city', label: 'City', type: 'text' },
-      { name: 'state', label: 'State', type: 'text' },
-      { name: 'pincode', label: 'Pincode', type: 'text' },
-      { name: 'latitude', label: 'Latitude', type: 'number', geo: true },
-      { name: 'longitude', label: 'Longitude', type: 'number', geo: true },
-    ],
-  },
+  // DONOR has a dedicated page: features/profile/donor/DonorProfilePage.jsx
+  // HOSPITAL has a dedicated page: features/profile/hospital/HospitalProfilePage.jsx
   BLOOD_BANK: {
     resource: 'blood-banks',
     fields: [

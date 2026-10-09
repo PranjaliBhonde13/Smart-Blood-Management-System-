@@ -45,7 +45,7 @@ export default function ResetPasswordPage() {
         <TextField label="Reset code" icon={KeyRound} value={form.token} onChange={update('token')}
                    error={err.fieldErrors.token} required />
         <TextField label="New password" type="password" icon={Lock} value={form.newPassword} onChange={update('newPassword')}
-                   error={err.fieldErrors.newPassword} hint="At least 6 characters." required />
+                   error={err.fieldErrors.newPassword} hint="8 to 72 characters." minLength={8} maxLength={72} required />
         <Button type="submit" fullWidth size="lg" loading={isLoading}>Update password</Button>
       </form>
     </AuthLayout>

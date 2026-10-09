@@ -34,7 +34,9 @@ public class JwtService {
         Date now = new Date();
         return Jwts.builder()
                 .subject(email)
-                .claims(Map.of("uid", userId, "role", role))
+                // iat_ms: millisecond issue time, compared against users.tokens_valid_after
+                // (the standard iat claim only has second precision).
+                .claims(Map.of("uid", userId, "role", role, "iat_ms", now.getTime()))
                 .issuedAt(now)
                 .expiration(new Date(now.getTime() + accessExpirationMs))
                 .signWith(key)
@@ -43,6 +45,13 @@ public class JwtService {
 
     public String extractEmail(String token) {
         return parse(token).getSubject();
+    }
+
+    /** Issue time with millisecond precision (falls back to the standard iat claim). */
+    public Date extractIssuedAt(String token) {
+        Claims claims = parse(token);
+        Number ms = claims.get("iat_ms", Number.class);
+        return ms != null ? new Date(ms.longValue()) : claims.getIssuedAt();
     }
 
     public boolean isValid(String token) {

@@ -4,6 +4,9 @@ import com.sben.common.entity.BaseEntity;
 import jakarta.persistence.*;
 import lombok.*;
 
+import java.time.LocalDateTime;
+import java.time.temporal.ChronoUnit;
+
 /**
  * Central identity/credential record. Role-specific profile data (patient,
  * donor, hospital, blood bank) lives in separate 1:1 tables added in Module 2.
@@ -47,4 +50,20 @@ public class User extends BaseEntity {
     /** Admin can suspend an account without deleting it. */
     @Column(name = "is_enabled", nullable = false)
     private boolean enabled = true;
+
+    /** Shown to the user at sign-in while the account is suspended. */
+    @Column(name = "suspension_reason", length = 500)
+    private String suspensionReason;
+
+    /**
+     * Access tokens issued before this instant are rejected. Bumped on logout,
+     * password reset and suspension so a stolen/stale JWT stops working at once.
+     */
+    @Column(name = "tokens_valid_after")
+    private LocalDateTime tokensValidAfter;
+
+    /** Invalidate every access token issued up to now. */
+    public void revokeIssuedTokens() {
+        this.tokensValidAfter = LocalDateTime.now().truncatedTo(ChronoUnit.MILLIS);
+    }
 }

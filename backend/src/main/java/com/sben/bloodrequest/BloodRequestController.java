@@ -1,6 +1,7 @@
 package com.sben.bloodrequest;
 
 import com.sben.bloodrequest.dto.BloodRequestResponse;
+import com.sben.bloodrequest.dto.ConfirmBloodGroupRequest;
 import com.sben.bloodrequest.dto.CreateBloodRequestRequest;
 import com.sben.bloodrequest.dto.UpdateStatusRequest;
 import com.sben.common.response.ApiResponse;
@@ -12,10 +13,20 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
+import org.springframework.core.io.FileSystemResource;
+import org.springframework.core.io.Resource;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
+
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.List;
 
 /**
  * Blood request endpoints (see docs/04-API.md §4). Access is split by role:
@@ -47,8 +58,26 @@ public class BloodRequestController {
     @GetMapping
     @PreAuthorize("hasAnyRole('HOSPITAL','ADMIN','BLOOD_BANK')")
     public ApiResponse<Page<BloodRequestResponse>> queue(@RequestParam(required = false) RequestStatus status,
-                                                         @PageableDefault(size = 20) Pageable pageable) {
-        return ApiResponse.ok(service.queue(status, pageable));
+                                                         @PageableDefault(size = 20) Pageable pageable,
+                                                         @AuthenticationPrincipal UserPrincipal me) {
+        return ApiResponse.ok(service.queue(status, pageable, Role.valueOf(me.getRole())));
+    }
+
+    /** Verified hospitals a patient may name as their preferred hospital. */
+    @GetMapping("/hospital-options")
+    @PreAuthorize("hasRole('PATIENT')")
+    public ApiResponse<List<BloodRequestService.HospitalOption>> hospitalOptions() {
+        return ApiResponse.ok(service.hospitalOptions());
+    }
+
+    /** Confirm (same group) or correct (different group + reason) the requested blood group. Audited. */
+    @PatchMapping("/{id}/blood-group")
+    @PreAuthorize("hasAnyRole('HOSPITAL','ADMIN')")
+    public ApiResponse<BloodRequestResponse> confirmBloodGroup(@PathVariable Long id,
+                                                               @AuthenticationPrincipal UserPrincipal me,
+                                                               @Valid @RequestBody ConfirmBloodGroupRequest req) {
+        return ApiResponse.ok("Blood group recorded",
+                service.confirmBloodGroup(id, req, me.getId(), Role.valueOf(me.getRole())));
     }
 
     @GetMapping("/open")
@@ -59,7 +88,7 @@ public class BloodRequestController {
     }
 
     @GetMapping("/{id}")
-    @PreAuthorize("hasAnyRole('PATIENT','HOSPITAL','ADMIN')")
+    @PreAuthorize("hasAnyRole('PATIENT','DONOR','HOSPITAL','ADMIN')")
     public ApiResponse<BloodRequestResponse> getOne(@PathVariable Long id,
                                                     @AuthenticationPrincipal UserPrincipal me) {
         Role role = Role.valueOf(me.getRole());
@@ -74,6 +103,25 @@ public class BloodRequestController {
         return ApiResponse.ok("Report uploaded", service.uploadReport(id, me.getId(), file));
     }
 
+    @GetMapping("/{id}/report")
+    @PreAuthorize("hasAnyRole('PATIENT','HOSPITAL','ADMIN')")
+    public ResponseEntity<Resource> downloadReport(@PathVariable Long id,
+                                                   @AuthenticationPrincipal UserPrincipal me) throws IOException {
+        Path file = service.loadReport(id, me.getId(), Role.valueOf(me.getRole()));
+        String type = Files.probeContentType(file);
+        return ResponseEntity.ok()
+                .contentType(type != null ? MediaType.parseMediaType(type) : MediaType.APPLICATION_OCTET_STREAM)
+                .header(HttpHeaders.CONTENT_DISPOSITION,
+                        "inline; filename=\"request-" + id + "-report" + extension(file) + "\"")
+                .body(new FileSystemResource(file));
+    }
+
+    private static String extension(Path file) {
+        String name = file.getFileName().toString();
+        int dot = name.lastIndexOf('.');
+        return dot >= 0 ? name.substring(dot) : "";
+    }
+
     @PatchMapping("/{id}/verify")
     @PreAuthorize("hasRole('HOSPITAL')")
     public ApiResponse<BloodRequestResponse> verify(@PathVariable Long id,
@@ -82,10 +130,12 @@ public class BloodRequestController {
     }
 
     @PatchMapping("/{id}/status")
-    @PreAuthorize("hasAnyRole('HOSPITAL','ADMIN','BLOOD_BANK')")
+    @PreAuthorize("hasAnyRole('HOSPITAL','ADMIN')")
     public ApiResponse<BloodRequestResponse> updateStatus(@PathVariable Long id,
+                                                          @AuthenticationPrincipal UserPrincipal me,
                                                           @Valid @RequestBody UpdateStatusRequest req) {
-        return ApiResponse.ok("Status updated", service.changeStatus(id, req.status()));
+        return ApiResponse.ok("Status updated",
+                service.updateStatus(id, req.status(), me.getId(), Role.valueOf(me.getRole())));
     }
 
     @DeleteMapping("/{id}")

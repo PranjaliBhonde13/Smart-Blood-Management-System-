@@ -1,28 +1,33 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import {
   Droplet, Siren, HeartHandshake, MapPin, ShieldCheck, Clock, Bell, Activity,
-  Hospital, Users, Search, ArrowRight, ChevronDown, Star, Phone, Mail, Menu, X,
+  Hospital, Search, ArrowRight, ChevronDown, Star, Phone, Mail, Menu, X,
 } from 'lucide-react';
 import Logo from '../components/ui/Logo';
 import Button from '../components/ui/Button';
 import { fadeUp, stagger } from '../lib/motion';
+import { API_BASE_URL } from '../lib/constants';
 
-/* Illustrative marketing data — no backend calls on the public page. */
-const STATS = [
-  { value: '12,400+', label: 'Registered donors' },
-  { value: '3,200+', label: 'Lives supported' },
-  { value: '48s', label: 'Avg. match time' },
-  { value: '320+', label: 'Partner hospitals' },
-];
+const GROUP_ORDER = ['O+', 'O-', 'A+', 'A-', 'B+', 'B-', 'AB+', 'AB-'];
 
-const BLOOD_GROUPS = [
-  { group: 'O+', level: 'high' }, { group: 'O-', level: 'low' },
-  { group: 'A+', level: 'high' }, { group: 'A-', level: 'medium' },
-  { group: 'B+', level: 'medium' }, { group: 'B-', level: 'low' },
-  { group: 'AB+', level: 'high' }, { group: 'AB-', level: 'low' },
-];
+/**
+ * Network-wide availability per blood group from verified blood banks
+ * (GET /public/stock-summary). Returns { status, rows }.
+ */
+function useStockSummary() {
+  const [state, setState] = useState({ status: 'loading', rows: [] });
+  useEffect(() => {
+    let cancelled = false;
+    fetch(`${API_BASE_URL}/public/stock-summary`)
+      .then((r) => (r.ok ? r.json() : Promise.reject(r.status)))
+      .then((body) => { if (!cancelled) setState({ status: 'ready', rows: body.data || [] }); })
+      .catch(() => { if (!cancelled) setState({ status: 'error', rows: [] }); });
+    return () => { cancelled = true; };
+  }, []);
+  return state;
+}
 
 const STEPS = [
   { icon: Siren, title: 'Raise a request', text: 'Patients or hospitals post an emergency request with blood group, units and location in seconds.' },
@@ -38,6 +43,7 @@ const FEATURES = [
   { icon: Activity, title: 'Live inventory', text: 'Blood banks keep stock levels current so patients see what is truly available.' },
   { icon: Hospital, title: 'Hospital workflows', text: 'Dedicated queues and verification tools for hospitals and blood banks.' },
 ];
+
 
 const TESTIMONIALS = [
   { name: 'Dr. Anita Rao', role: 'Emergency Physician', text: 'We fulfilled a critical AB- request in under ten minutes. This network is a genuine lifesaver.' },
@@ -79,7 +85,6 @@ function Nav() {
   const links = [
     ['How it works', '#how'],
     ['Features', '#features'],
-    ['Availability', '#availability'],
     ['FAQ', '#faq'],
   ];
   return (
@@ -119,6 +124,7 @@ function Nav() {
 }
 
 function Hero() {
+  const stock = useStockSummary();
   return (
     <section className="relative overflow-hidden">
       <div className="pointer-events-none absolute inset-0 bg-grad-mesh" />
@@ -152,7 +158,6 @@ function Hero() {
           </motion.div>
           <motion.div variants={fadeUp} className="mt-8 flex items-center gap-6 text-sm text-slate-500">
             <span className="inline-flex items-center gap-2"><ShieldCheck className="h-4 w-4 text-success" /> Verified profiles</span>
-            <span className="inline-flex items-center gap-2"><Users className="h-4 w-4 text-ocean-600" /> 12k+ donors</span>
           </motion.div>
         </motion.div>
 
@@ -166,24 +171,33 @@ function Hero() {
                 </span>
                 <div>
                   <p className="text-sm font-semibold text-slate-900 dark:text-white">Live blood availability</p>
-                  <p className="text-xs text-slate-500">Updated moments ago</p>
+                  <p className="text-xs text-slate-500">Across verified blood banks</p>
                 </div>
               </div>
-              <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-success ring-1 ring-inset ring-emerald-200 dark:bg-emerald-900/30 dark:ring-emerald-900">
-                <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-success" /> Live
-              </span>
+              {stock.status === 'ready' && (
+                <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-success ring-1 ring-inset ring-emerald-200 dark:bg-emerald-900/30 dark:ring-emerald-900">
+                  <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-success" /> Live
+                </span>
+              )}
             </div>
-            <div className="mt-5 grid grid-cols-2 gap-3">
-              {BLOOD_GROUPS.slice(0, 4).map((b) => {
-                const lv = LEVEL[b.level];
+            <div className="mt-5 grid grid-cols-2 gap-2.5 max-h-[320px] overflow-y-auto scroll-slim pr-1">
+              {stock.status === 'error' ? (
+                <p className="col-span-2 py-6 text-center text-sm text-slate-500">
+                  Availability can't be loaded right now. Sign in to search nearby blood banks.
+                </p>
+              ) : GROUP_ORDER.map((group) => {
+                const b = stock.rows.find((r) => r.group === group);
+                const lv = b ? LEVEL[b.level] : null;
                 return (
-                  <div key={b.group} className="rounded-2xl border border-slate-100 bg-white/70 p-3.5 dark:border-slate-800 dark:bg-slate-900/60">
+                  <div key={group} className="rounded-2xl border border-slate-100 bg-white/70 p-3.5 dark:border-slate-800 dark:bg-slate-900/60">
                     <div className="flex items-center justify-between">
-                      <span className="text-lg font-bold text-brand-600">{b.group}</span>
-                      <span className={`text-[11px] font-semibold ${lv.cls}`}>{lv.label}</span>
+                      <span className="text-lg font-bold text-brand-600">{group}</span>
+                      <span className={`text-[11px] font-semibold ${lv ? lv.cls : 'text-slate-400'}`}>
+                        {lv ? `${lv.label} · ${b.totalUnits} u` : 'Loading…'}
+                      </span>
                     </div>
                     <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800">
-                      <div className={`h-full rounded-full ${lv.bar} ${lv.w}`} />
+                      {lv && <div className={`h-full rounded-full ${lv.bar}`} style={{ width: `${b.percentage}%` }} />}
                     </div>
                   </div>
                 );
@@ -206,18 +220,6 @@ export default function LandingPage() {
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950">
       <Nav />
       <Hero />
-
-      {/* Trust stats */}
-      <section className="mx-auto max-w-7xl px-5 pb-8 lg:px-8">
-        <Reveal className="grid grid-cols-2 gap-4 rounded-3xl border border-slate-100 bg-white p-6 shadow-card md:grid-cols-4 dark:border-slate-800 dark:bg-slate-900">
-          {STATS.map((s) => (
-            <div key={s.label} className="text-center">
-              <div className="text-2xl font-extrabold text-slate-900 sm:text-3xl dark:text-white">{s.value}</div>
-              <div className="mt-1 text-sm text-slate-500">{s.label}</div>
-            </div>
-          ))}
-        </Reveal>
-      </section>
 
       {/* How it works */}
       <section id="how" className="mx-auto max-w-7xl px-5 py-20 lg:px-8">
@@ -262,34 +264,6 @@ export default function LandingPage() {
               </Reveal>
             ))}
           </div>
-        </div>
-      </section>
-
-      {/* Live availability */}
-      <section id="availability" className="mx-auto max-w-7xl px-5 py-20 lg:px-8">
-        <Reveal className="mx-auto max-w-2xl text-center">
-          <span className="text-sm font-bold uppercase tracking-widest text-brand-600">Live availability</span>
-          <h2 className="mt-3 text-3xl font-extrabold tracking-tight text-slate-900 sm:text-4xl dark:text-white">Blood availability at a glance</h2>
-          <p className="mt-3 text-slate-600 dark:text-slate-300">A snapshot across the network. Sign in to see availability near you.</p>
-        </Reveal>
-        <div className="mt-12 grid grid-cols-2 gap-4 sm:grid-cols-4">
-          {BLOOD_GROUPS.map((b, i) => {
-            const lv = LEVEL[b.level];
-            return (
-              <Reveal key={b.group} delay={(i % 4) * 0.06}>
-                <div className="rounded-3xl border border-slate-100 bg-white p-5 shadow-card dark:border-slate-800 dark:bg-slate-900">
-                  <div className="flex items-center justify-between">
-                    <span className="grid h-11 w-11 place-items-center rounded-2xl bg-brand-50 text-lg font-extrabold text-brand-600 dark:bg-brand-900/30">{b.group}</span>
-                    <Droplet className={`h-5 w-5 ${lv.cls}`} />
-                  </div>
-                  <div className="mt-4 h-2 w-full overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800">
-                    <div className={`h-full rounded-full ${lv.bar} ${lv.w}`} />
-                  </div>
-                  <p className={`mt-2 text-xs font-semibold ${lv.cls}`}>{lv.label}</p>
-                </div>
-              </Reveal>
-            );
-          })}
         </div>
       </section>
 
@@ -386,7 +360,6 @@ export default function LandingPage() {
               <ul className="mt-3 space-y-2 text-sm text-slate-500">
                 <li><a href="#how" className="hover:text-brand-600">How it works</a></li>
                 <li><a href="#features" className="hover:text-brand-600">Features</a></li>
-                <li><a href="#availability" className="hover:text-brand-600">Availability</a></li>
               </ul>
             </div>
             <div>
@@ -399,7 +372,6 @@ export default function LandingPage() {
             </div>
           </div>
           <div className="mt-10 flex flex-col items-center justify-between gap-3 border-t border-slate-200 pt-6 text-sm text-slate-400 sm:flex-row dark:border-slate-800">
-            <span>© 2026 Smart Blood Emergency Network</span>
             <span>Built to save lives · MCA Project</span>
           </div>
         </div>
@@ -407,3 +379,4 @@ export default function LandingPage() {
     </div>
   );
 }
+

@@ -15,6 +15,7 @@ import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
 import java.time.Instant;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -35,6 +36,10 @@ public class RateLimitFilter extends OncePerRequestFilter {
     private static final int MAX_REQUESTS = 10;      // per window, per IP
     private static final long WINDOW_MS = 60_000;    // 1 minute
     private static final String PROTECTED_PREFIX = "/api/v1/auth/";
+    private static final int EVICT_THRESHOLD = 10_000;
+    /** Need a valid token already, so they are not brute-force targets; the SPA calls them routinely. */
+    private static final Set<String> UNLIMITED = Set.of(
+            "/api/v1/auth/refresh", "/api/v1/auth/me", "/api/v1/auth/logout");
 
     // Injected: Spring's ObjectMapper is pre-configured (e.g. Java-time support),
     // unlike a bare `new ObjectMapper()`.
@@ -44,10 +49,13 @@ public class RateLimitFilter extends OncePerRequestFilter {
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response,
                                     FilterChain filterChain) throws ServletException, IOException {
-        if (!request.getRequestURI().startsWith(PROTECTED_PREFIX)) {
+        String uri = request.getRequestURI();
+        if (!uri.startsWith(PROTECTED_PREFIX) || UNLIMITED.contains(uri)) {
             filterChain.doFilter(request, response);
             return;
         }
+        // Real client IP: with server.forward-headers-strategy=native, Tomcat's
+        // RemoteIpValve resolves X-Forwarded-For from trusted proxies (nginx).
         String key = request.getRemoteAddr();
         if (!allow(key)) {
             writeTooManyRequests(request, response);
@@ -59,6 +67,9 @@ public class RateLimitFilter extends OncePerRequestFilter {
     /** Fixed-window check: reset the counter each window, reject over the cap. */
     private boolean allow(String key) {
         long now = Instant.now().toEpochMilli();
+        if (windows.size() > EVICT_THRESHOLD) {
+            windows.entrySet().removeIf(e -> now - e.getValue().start > WINDOW_MS);
+        }
         Window w = windows.compute(key, (k, existing) -> {
             if (existing == null || now - existing.start > WINDOW_MS) {
                 return new Window(now);

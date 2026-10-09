@@ -14,6 +14,11 @@ export const requestsApi = apiSlice.injectEndpoints({
       query: (page = 0) => `/blood-requests/mine?page=${page}&size=20&sort=requestDate,desc`,
       providesTags: ['Request'],
     }),
+    /** Up to 200 most recent own requests — for dashboard counts. */
+    myRequestsSummary: builder.query({
+      query: () => '/blood-requests/mine?page=0&size=200&sort=requestDate,desc',
+      providesTags: ['Request'],
+    }),
     requestQueue: builder.query({
       query: ({ status = '', page = 0 } = {}) =>
         `/blood-requests?page=${page}&size=20&sort=requestDate,desc${status ? `&status=${status}` : ''}`,
@@ -29,6 +34,11 @@ export const requestsApi = apiSlice.injectEndpoints({
     }),
     updateRequestStatus: builder.mutation({
       query: ({ id, status }) => ({ url: `/blood-requests/${id}/status`, method: 'PATCH', body: { status } }),
+      invalidatesTags: ['Request'],
+    }),
+    /** Hospital/admin: confirm (same group) or correct (new group + reason) the requested group. Audited. */
+    confirmBloodGroup: builder.mutation({
+      query: ({ id, bloodGroup, reason }) => ({ url: `/blood-requests/${id}/blood-group`, method: 'PATCH', body: { bloodGroup, reason } }),
       invalidatesTags: ['Request'],
     }),
     cancelRequest: builder.mutation({
@@ -49,10 +59,12 @@ export const requestsApi = apiSlice.injectEndpoints({
 export const {
   useCreateRequestMutation,
   useMyRequestsQuery,
+  useMyRequestsSummaryQuery,
   useRequestQueueQuery,
   useOpenRequestsQuery,
   useVerifyRequestMutation,
   useUpdateRequestStatusMutation,
   useCancelRequestMutation,
+  useConfirmBloodGroupMutation,
   useUploadReportMutation,
 } = requestsApi;

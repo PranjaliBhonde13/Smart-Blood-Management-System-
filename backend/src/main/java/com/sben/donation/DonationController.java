@@ -3,6 +3,7 @@ package com.sben.donation;
 import com.sben.common.response.ApiResponse;
 import com.sben.donation.dto.DonationResponse;
 import com.sben.security.UserPrincipal;
+import com.sben.user.Role;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -40,8 +41,10 @@ public class DonationController {
 
     @PatchMapping("/request/{requestId}/complete")
     @PreAuthorize("hasAnyRole('HOSPITAL','ADMIN')")
-    public ApiResponse<DonationResponse> complete(@PathVariable Long requestId) {
-        return ApiResponse.ok("Donation completed", service.complete(requestId));
+    public ApiResponse<DonationResponse> complete(@PathVariable Long requestId,
+                                                  @AuthenticationPrincipal UserPrincipal me) {
+        return ApiResponse.ok("Donation completed",
+                service.complete(requestId, me.getId(), Role.valueOf(me.getRole())));
     }
 
     @PostMapping("/request/{requestId}/fulfill-from-bank")

@@ -13,8 +13,14 @@ public interface HospitalRepository extends JpaRepository<Hospital, Long> {
 
     boolean existsByLicenseNumber(String licenseNumber);
 
+    boolean existsByLicenseNumberAndIdNot(String licenseNumber, Long id);
+
     // --- admin: verification queue ---
     java.util.List<Hospital> findByVerifiedFalseAndDeletedFalse();
+
+    java.util.List<Hospital> findByVerifiedFalseAndRejectedAtIsNullAndDeletedFalse();
+
+    long countByVerifiedFalseAndRejectedAtIsNullAndDeletedFalse();
 
     long countByVerifiedFalseAndDeletedFalse();
 

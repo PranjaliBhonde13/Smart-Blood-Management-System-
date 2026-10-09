@@ -1,13 +1,16 @@
 import { Droplet, HeartHandshake, Check, X, Calendar, Sparkles } from 'lucide-react';
 import { useOpenRequestsQuery } from '../../requests/requestsApi';
 import { useAcceptRequestMutation, useRejectRequestMutation } from '../donationsApi';
+import { useState } from 'react';
 import { notify } from '../../../lib/toast';
+import { parseApiError } from '../../../lib/apiError';
 import { StatusBadge, UrgencyBadge } from '../../../components/ui/Badge';
 import PageHeader from '../../../components/layout/PageHeader';
 import Card from '../../../components/ui/Card';
 import Button from '../../../components/ui/Button';
 import EmptyState from '../../../components/ui/EmptyState';
 import { SkeletonCard } from '../../../components/ui/Skeleton';
+import { formatDate } from '../../../lib/format';
 
 /**
  * Donor's feed of approved requests they are blood-compatible to fulfil.
@@ -16,14 +19,25 @@ import { SkeletonCard } from '../../../components/ui/Skeleton';
  */
 export default function OpenRequestsPage() {
   const { data, isLoading } = useOpenRequestsQuery();
-  const [accept, { isLoading: accepting }] = useAcceptRequestMutation();
-  const [reject, { isLoading: rejecting }] = useRejectRequestMutation();
+  const [accept] = useAcceptRequestMutation();
+  const [reject] = useRejectRequestMutation();
+  const [busyId, setBusyId] = useState(null);
 
   const rows = data?.data?.content || [];
-  const busy = accepting || rejecting;
 
-  const onAccept = (id) => accept(id).unwrap().then(() => notify.success('Thank you! Donation scheduled 🎉'));
-  const onReject = (id) => reject(id).unwrap().then(() => notify.info('Request declined'));
+  const run = async (id, action, msg, notifyFn) => {
+    setBusyId(id);
+    try {
+      await action(id).unwrap();
+      notifyFn(msg);
+    } catch (err) {
+      notify.error(parseApiError(err).message);
+    } finally {
+      setBusyId(null);
+    }
+  };
+  const onAccept = (id) => run(id, accept, 'Thank you! Donation scheduled 🎉', notify.success);
+  const onReject = (id) => run(id, reject, 'Request declined', notify.info);
 
   return (
     <div>
@@ -57,13 +71,13 @@ export default function OpenRequestsPage() {
                   <span className="font-semibold">{r.unitsRequired} unit(s)</span> needed
                 </div>
                 <div className="flex items-center gap-2 text-slate-500">
-                  <Calendar className="h-4 w-4" /> Raised {new Date(r.requestDate).toLocaleDateString()}
+                  <Calendar className="h-4 w-4" /> Raised {formatDate(r.requestDate)}
                 </div>
                 <StatusBadge status={r.status} />
               </div>
               <div className="mt-auto flex gap-2">
-                <Button fullWidth size="sm" loading={busy} onClick={() => onAccept(r.id)} leftIcon={<Check className="h-4 w-4" />}>Accept</Button>
-                <Button variant="secondary" size="sm" loading={busy} onClick={() => onReject(r.id)} leftIcon={<X className="h-4 w-4" />}>Decline</Button>
+                <Button fullWidth size="sm" loading={busyId === r.id} disabled={busyId !== null} onClick={() => onAccept(r.id)} leftIcon={<Check className="h-4 w-4" />}>Accept</Button>
+                <Button variant="secondary" size="sm" disabled={busyId !== null} onClick={() => onReject(r.id)} leftIcon={<X className="h-4 w-4" />}>Decline</Button>
               </div>
             </Card>
           ))}

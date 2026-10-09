@@ -6,6 +6,7 @@ import { Badge } from '../../../components/ui/Badge';
 import EmptyState from '../../../components/ui/EmptyState';
 import Skeleton from '../../../components/ui/Skeleton';
 import { Table, THead, TH, TBody, TR, TD } from '../../../components/ui/Table';
+import { formatDate } from '../../../lib/format';
 
 const DONATION_TONE = { SCHEDULED: 'warning', COMPLETED: 'success', CANCELLED: 'neutral' };
 
@@ -55,8 +56,8 @@ export default function DonationHistoryPage() {
                 <TD className="font-semibold">#{d.requestId}</TD>
                 <TD>{d.unitsDonated}</TD>
                 <TD><Badge tone={DONATION_TONE[d.status] || 'neutral'} dot>{d.status}</Badge></TD>
-                <TD className="text-slate-500">{d.donationDate || '—'}</TD>
-                <TD className="text-slate-500">{new Date(d.createdAt).toLocaleDateString()}</TD>
+                <TD className="text-slate-500">{formatDate(d.donationDate)}</TD>
+                <TD className="text-slate-500">{formatDate(d.createdAt)}</TD>
               </TR>
             ))}
           </TBody>

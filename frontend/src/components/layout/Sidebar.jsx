@@ -64,12 +64,13 @@ export default function Sidebar({ open, onClose, collapsed = false, onToggleColl
                     {isActive && (
                       <motion.span
                         layoutId="nav-active"
-                        className="absolute inset-0 -z-10 rounded-xl bg-brand-50 ring-1 ring-inset ring-brand-100 dark:bg-brand-900/30 dark:ring-brand-900"
+                        className="absolute inset-0 -z-10 overflow-hidden rounded-xl bg-brand-50 ring-1 ring-inset ring-brand-100 dark:bg-brand-900/30 dark:ring-brand-900"
                         transition={{ type: 'spring', stiffness: 500, damping: 34 }}
-                      />
-                    )}
-                    {isActive && !collapsed && (
-                      <motion.span layoutId="nav-bar" className="absolute left-0 top-1/2 h-6 w-1 -translate-y-1/2 rounded-r-full bg-grad-brand" />
+                      >
+                        {!collapsed && (
+                          <span className="absolute left-0 top-1/2 h-5 w-1 -translate-y-1/2 rounded-r-full bg-grad-brand" />
+                        )}
+                      </motion.span>
                     )}
                     {/* Icons are React components (lucide forwardRef objects or fn);
                         render as an element. Fall back to a text node for a raw string. */}
