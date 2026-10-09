@@ -1,0 +1,4 @@
+-------------------------------------------------------------------------------
+Test set: com.sben.admin.AdminFunctionalityTest
+-------------------------------------------------------------------------------
+Tests run: 7, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 5.520 s -- in com.sben.admin.AdminFunctionalityTest
