@@ -29,6 +29,7 @@ const VerificationsPage = lazy(() => import('../features/admin/pages/Verificatio
 const HospitalReviewPage = lazy(() => import('../features/admin/pages/HospitalReviewPage'));
 const PatientVerificationsPage = lazy(() => import('../features/admin/pages/PatientVerificationsPage'));
 const AuditLogPage = lazy(() => import('../features/admin/pages/AuditLogPage'));
+const EmailDeliveryPage = lazy(() => import('../features/admin/pages/EmailDeliveryPage'));
 const ReportsPage = lazy(() => import('../features/admin/pages/ReportsPage'));
 const AdminRequestsPage = lazy(() => import('../features/admin/pages/AdminRequestsPage'));
 const UserDetailPage = lazy(() => import('../features/admin/pages/UserDetailPage'));
@@ -94,6 +95,7 @@ const ROLE_BLOCKS = [
       { path: 'verifications/hospitals/:id', element: <HospitalReviewPage /> },
       { path: 'patient-verifications', element: <PatientVerificationsPage /> },
       { path: 'audit-logs', element: <AuditLogPage /> },
+      { path: 'emails', element: <EmailDeliveryPage /> },
       { path: 'reports', element: <ReportsPage /> },
     ],
   },

@@ -5,7 +5,8 @@ import com.sben.auth.dto.LoginRequest;
 import com.sben.auth.token.RefreshToken;
 import com.sben.auth.token.RefreshTokenService;
 import com.sben.auth.token.VerificationTokenRepository;
-import com.sben.notification.EmailService;
+import com.sben.auth.device.LoginDeviceService;
+import com.sben.notification.email.AccountEmails;
 import com.sben.security.JwtService;
 import com.sben.user.Role;
 import com.sben.user.User;
@@ -34,7 +35,8 @@ class UserRolesAuthTest {
     @Mock private PasswordEncoder passwordEncoder;
     @Mock private JwtService jwtService;
     @Mock private AuthenticationManager authenticationManager;
-    @Mock private EmailService emailService;
+    @Mock private AccountEmails accountEmails;
+    @Mock private LoginDeviceService loginDevices;
 
     private AuthService authService;
 
@@ -47,7 +49,8 @@ class UserRolesAuthTest {
                 passwordEncoder,
                 jwtService,
                 authenticationManager,
-                emailService
+                accountEmails,
+                loginDevices
         );
     }
 

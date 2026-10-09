@@ -54,7 +54,7 @@ public class BroadcastService {
             return new BroadcastResult(recipients.size(), false);
         }
         recipients.forEach(u -> notificationService.notify(u.getId(), req.title().trim(), req.message().trim(),
-                Notification.Type.SYSTEM));
+                Notification.Type.SYSTEM, com.sben.notification.email.EmailCategory.ANNOUNCEMENT));
         auditService.record("BROADCAST_SENT", "Broadcast", null,
                 "\"" + req.title().trim() + "\" to " + describe(req) + " — " + recipients.size() + " recipient(s)");
         return new BroadcastResult(recipients.size(), true);

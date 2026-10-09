@@ -59,6 +59,6 @@ export const apiSlice = createApi({
   reducerPath: 'api',
   baseQuery: baseQueryWithReauth,
   // Cache tags used by feature endpoints to invalidate on mutations.
-  tagTypes: ['User', 'Request', 'Donation', 'Stock', 'Notification', 'HospitalDocs'],
+  tagTypes: ['User', 'Request', 'Donation', 'Stock', 'Notification', 'HospitalDocs', 'Email'],
   endpoints: () => ({}),
 });

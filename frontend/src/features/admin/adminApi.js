@@ -114,6 +114,24 @@ export const adminApi = apiSlice.injectEndpoints({
       query: () => '/admin/audit-logs/actions',
       providesTags: ['User'],
     }),
+
+    // ----- email delivery -----
+    emailLog: builder.query({
+      query: ({ page = 0, status = '', category = '', q = '' } = {}) => `/admin/emails${qs({ page, status, category, q })}`,
+      providesTags: ['Email'],
+    }),
+    emailSummary: builder.query({
+      query: () => '/admin/emails/summary',
+      providesTags: ['Email'],
+    }),
+    sendEmailPreviews: builder.mutation({
+      query: (to) => ({ url: '/admin/emails/previews', method: 'POST', body: { to } }),
+      invalidatesTags: ['Email'],
+    }),
+    retryEmail: builder.mutation({
+      query: (id) => ({ url: `/admin/emails/${id}/retry`, method: 'POST' }),
+      invalidatesTags: ['Email'],
+    }),
   }),
 });
 
@@ -133,6 +151,10 @@ export const {
   useAdminRequestsQuery,
   useStuckRequestsQuery,
   useEscalateRequestMutation,
+  useEmailLogQuery,
+  useEmailSummaryQuery,
+  useRetryEmailMutation,
+  useSendEmailPreviewsMutation,
   useNetworkInventoryQuery,
   useAnalyticsQuery,
   useBroadcastMutation,

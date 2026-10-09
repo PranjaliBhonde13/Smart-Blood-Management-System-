@@ -8,7 +8,9 @@ import com.sben.auth.token.VerificationTokenRepository;
 import com.sben.common.exception.BusinessException;
 import com.sben.common.exception.FieldValidationException;
 import com.sben.common.exception.ResourceNotFoundException;
-import com.sben.notification.EmailService;
+import com.sben.auth.device.LoginDeviceService;
+import com.sben.common.web.RequestInfo;
+import com.sben.notification.email.AccountEmails;
 import com.sben.security.JwtService;
 import com.sben.user.Role;
 import com.sben.user.User;
@@ -53,7 +55,8 @@ public class AuthService {
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
     private final AuthenticationManager authenticationManager;
-    private final EmailService emailService;
+    private final AccountEmails accountEmails;
+    private final LoginDeviceService loginDevices;
 
     private static final SecureRandom RANDOM = new SecureRandom();
 
@@ -100,6 +103,7 @@ public class AuthService {
         verificationTokenRepository.save(token);
         user.setEmailVerified(true);
         userRepository.save(user);
+        accountEmails.welcome(user);
         log.info("Email verified for {}", user.getEmail());
     }
 
@@ -133,6 +137,11 @@ public class AuthService {
             throw new BusinessException("Invalid email or password", HttpStatus.UNAUTHORIZED);
         }
         User user = getUserByEmail(req.email());
+        try {
+            loginDevices.recordSignIn(user); // emails a security alert for a new device or network
+        } catch (RuntimeException e) {
+            log.warn("Could not record sign-in device for {}: {}", user.getEmail(), e.getMessage());
+        }
         return buildAuthResponse(user, refreshTokenService.issue(user.getId()).getToken());
     }
 
@@ -181,6 +190,7 @@ public class AuthService {
         user.revokeIssuedTokens();
         userRepository.save(user);
         refreshTokenService.revokeAll(user.getId()); // force re-login everywhere
+        accountEmails.passwordChanged(user, RequestInfo.clientIp(), true);
     }
 
     /**
@@ -204,14 +214,7 @@ public class AuthService {
         user.revokeIssuedTokens();
         userRepository.save(user);
         refreshTokenService.revokeAll(user.getId()); // sign out every other session
-        try {
-            emailService.send(user.getEmail(), "Your password was changed",
-                    "The password for your Smart Blood Emergency Network account was changed on "
-                            + LocalDateTime.now().withNano(0) + ". If this wasn't you, reset your password "
-                            + "immediately using \"Forgot password\" and contact support.");
-        } catch (Exception e) {
-            log.warn("Password-change email to {} failed: {}", user.getEmail(), e.getMessage());
-        }
+        accountEmails.passwordChanged(user, RequestInfo.clientIp(), false);
         return buildAuthResponse(user, refreshTokenService.issue(user.getId()).getToken());
     }
 
@@ -240,7 +243,11 @@ public class AuthService {
                 .used(false)
                 .build();
         verificationTokenRepository.save(token);
-        emailService.sendOtp(user.getEmail(), code, otpExpiryMinutes);
+        if (type == VerificationToken.Type.PASSWORD_RESET) {
+            accountEmails.passwordResetCode(user, code, otpExpiryMinutes, RequestInfo.clientIp());
+        } else {
+            accountEmails.verificationCode(user, code, otpExpiryMinutes);
+        }
     }
 
     private VerificationToken validToken(Long userId, VerificationToken.Type type, String code) {

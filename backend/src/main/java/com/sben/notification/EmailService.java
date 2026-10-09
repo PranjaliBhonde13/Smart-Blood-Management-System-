@@ -15,6 +15,15 @@ public interface EmailService {
         send(to, subject, htmlBody);
     }
 
+    /**
+     * Deliver a rendered outbox email (HTML with a plain-text alternative).
+     * Used by the email dispatcher; throws {@link com.sben.notification.email.EmailDeliveryException}
+     * when the server rejects it, marking whether a retry makes sense.
+     */
+    default void deliver(com.sben.notification.email.OutgoingEmail email) {
+        sendHtml(email.to(), email.subject(), email.html());
+    }
+
     /** Convenience for the OTP flow sending a styled HTML email with plain text fallback. */
     default void sendOtp(String to, String code, int expiryMinutes) {
         String subject = "Your Verification Code — Smart Blood Emergency Network";

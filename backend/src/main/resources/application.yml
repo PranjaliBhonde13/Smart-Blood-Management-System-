@@ -12,9 +12,10 @@ spring:
 
   datasource:
     # Local MariaDB/MySQL database for development (create it with database/setup-database.ps1).
-    url: jdbc:mariadb://${DB_HOST:localhost}:${DB_PORT:3309}/${DB_NAME:SBN}?useSSL=false&serverTimezone=UTC
-    username: ${DB_USERNAME:root}
-    password: ${DB_PASSWORD:}
+    # Defaults match database/setup-database.ps1, so a fresh clone needs no .env.
+    url: jdbc:mariadb://${DB_HOST:localhost}:${DB_PORT:3306}/${DB_NAME:SBN}?useSSL=false&serverTimezone=UTC
+    username: ${DB_USERNAME:sben}
+    password: ${DB_PASSWORD:sben}
     driver-class-name: org.mariadb.jdbc.Driver
 
   jpa:
@@ -39,18 +40,24 @@ spring:
     baseline-on-migrate: true
     locations: classpath:db/migration
 
-  # ----- Mail: Brevo SMTP for real OTP emails -----
+  # ----- Mail: SMTP (Gmail by default; any provider via MAIL_HOST/MAIL_PORT) -----
+  # Credentials come ONLY from the environment / backend/.env — never commit them here.
+  # For Gmail, MAIL_PASSWORD must be a Google app password, not the account password.
   mail:
-    host: ${MAIL_HOST:smtp-relay.brevo.com}
+    host: ${MAIL_HOST:smtp.gmail.com}
     port: ${MAIL_PORT:587}
-    # Credentials come ONLY from the environment / backend/.env — never commit them here.
     username: ${MAIL_USERNAME:}
     password: ${MAIL_PASSWORD:}
+    default-encoding: UTF-8
     properties:
       mail.smtp.auth: true
       mail.smtp.starttls.enable: true
       mail.smtp.starttls.required: true
-      mail.smtp.ssl.trust: smtp-relay.brevo.com
+      mail.smtp.ssl.trust: ${MAIL_HOST:smtp.gmail.com}
+      # Never let a slow mail server hang a sending thread.
+      mail.smtp.connectiontimeout: 10000
+      mail.smtp.timeout: 15000
+      mail.smtp.writetimeout: 15000
 
 server:
   port: 8080
@@ -79,16 +86,6 @@ management:
     mail:
       enabled: false
 
-# ----- Old mail config kept for reference. Do not enable under management. -----
-#  mail:
-#    host: ${MAIL_HOST:smtp.gmail.com}
-#    port: ${MAIL_PORT:587}
-#    username: ${MAIL_USERNAME:}
-#    password: ${MAIL_PASSWORD:}
-#    properties:
-#      mail.smtp.auth: true
-#      mail.smtp.starttls.enable: true
-
 # ----- Application-specific settings -----
 app:
   # Base64 256-bit dev secret. OVERRIDE with env JWT_SECRET in production.
@@ -99,10 +96,27 @@ app:
   otp:
     expiration-minutes: 10
     length: 6
+  # Public address of the web app, used for links in emails.
+  frontend-url: ${FRONTEND_URL:http://localhost:5173}
   mail:
-    from: "${MAIL_FROM:Smart Blood Emergency Network <pranjali@gmail.com>}"
-  # Set to false to log OTPs to console without requiring SMTP
+    # Gmail only sends as the signed-in account (or a verified alias).
+    from: "${MAIL_FROM:Smart Blood Emergency Network <no-reply@localhost>}"
+    app-name: Smart Blood Emergency Network
+    # Never emailed (recorded as SUPPRESSED): test domains and the demo @sben.com accounts.
+    suppressed-domains: ${MAIL_SUPPRESSED_DOMAINS:example.com,example.org,example.net,example.test,sben.com}
+    # Stay within the provider's limits (Gmail: about 500 recipients/day). Over a cap, emails wait.
+    max-per-minute: ${MAIL_MAX_PER_MINUTE:20}
+    max-per-day: ${MAIL_MAX_PER_DAY:450}
+    max-attempts: ${MAIL_MAX_ATTEMPTS:6}
+    dispatch-interval-ms: ${MAIL_DISPATCH_INTERVAL_MS:15000}
+    # Delivered emails are deleted after this many days; failed ones are kept for review.
+    retention-days: ${MAIL_RETENTION_DAYS:90}
+  # false = emails are logged to the console instead of sent (local development).
   mail-enabled: ${MAIL_ENABLED:false}
+  admin:
+    # Real administrator accounts, created at startup if missing (comma-separated).
+    # They set their password via "Forgot password"; no password is ever configured.
+    emails: ${ADMIN_EMAILS:}
   # Create the demo accounts (password Pass@123) when they are missing. Existing
   # accounts are never modified. Set SEED_DEMO_USERS=false in production.
   seed-demo-users: ${SEED_DEMO_USERS:true}

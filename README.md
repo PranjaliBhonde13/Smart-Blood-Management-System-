@@ -30,7 +30,8 @@ and the seed users (`V2`, password `Pass@123` for `admin@`, `patient@`, `donor@`
 
 Options: `-Port 3309`, `-AdminUser root -AdminPassword <pw>`, `-AppPassword <pw>`,
 `-Reset` (drop and rebuild). The backend reads `DB_HOST`/`DB_PORT`/`DB_NAME`/
-`DB_USERNAME`/`DB_PASSWORD` from `backend/.env`.
+`DB_USERNAME`/`DB_PASSWORD` from the environment or an optional `backend/.env`;
+with the script defaults above, no configuration is needed.
 
 **Adding schema changes:** create a new file in
 `backend/src/main/resources/db/migration` (e.g. `V3__add_x.sql`). Never edit an applied one.
@@ -39,45 +40,36 @@ Both the setup script and the backend (Flyway, on startup) pick it up.
 ## 2. Run the backend
 ```bash
 cd backend
-# DB settings come from backend/.env (copy .env.example if missing).
-./mvnw spring-boot:run
+./mvnw spring-boot:run      # no .env needed: defaults match the database script
 ```
 - API:      http://localhost:8080/api/v1/ping
 - Swagger:  http://localhost:8080/swagger-ui.html
 - Health:   http://localhost:8080/actuator/health
 
-### Enable real OTP email with Brevo SMTP
-By default, `MAIL_ENABLED=false`, so OTP emails are printed in the backend logs (via `MockEmailService`).
-To send real OTP emails through Brevo SMTP:
+Demo accounts (password `Pass@123`): `admin@`, `patient@`, `donor@`, `hospital@`, `bloodbank@sben.com`.
 
-1. Obtain your SMTP Key and verified Sender Email from [Brevo Dashboard](https://app.brevo.com/).
-2. Copy `backend/.env.example` to `.env` or set environment variables before running the backend:
+### Email
+Out of the box, emails are **not sent**: each one (including sign-up and password-reset
+codes) is printed in the backend console, so registration works without any mail account.
+Every email is also listed under **Admin → Email delivery**. Demo `@sben.com` accounts are
+never emailed; to test real delivery, register with an address you own.
 
-```powershell
-$env:MAIL_ENABLED="true"
-$env:MAIL_HOST="smtp-relay.brevo.com"
-$env:MAIL_PORT="587"
-$env:MAIL_USERNAME="pranjalibhonde13@gmail.com"
-$env:MAIL_PASSWORD="your-brevo-smtp-key"
-$env:MAIL_FROM="Smart Blood Emergency Network <pranjalibhonde13@gmail.com>"
-./mvnw spring-boot:run
-```
+To send real email, create `backend/.env` from `backend/.env.example` (it is git-ignored —
+never commit it) and set `MAIL_ENABLED=true` plus the SMTP settings. For Gmail,
+`MAIL_PASSWORD` must be a Google **app password**. Ask the project owner for the shared
+credentials privately; they are deliberately not in this public repository.
 
-Brevo notes:
-- Use the SMTP login from Brevo SMTP & API settings.
-- Use a Brevo SMTP key (not your account password or REST API key).
-- Ensure `MAIL_FROM` matches your verified sender email/domain in Brevo.
-- Emails will send as styled HTML with standard plain-text fallback.
-
+Optional: `ADMIN_EMAILS` (comma-separated) creates real administrator accounts at startup;
+each sets a password through **Forgot password**.
 
 ## 3. Run the frontend
 ```bash
 cd frontend
-cp .env.example .env
 npm install      # first time only
-npm run dev
+npm run dev      # no .env needed: the API defaults to http://localhost:8080/api/v1
 ```
 - App: http://localhost:5173
+- Optional `frontend/.env` (see `.env.example`): `VITE_GOOGLE_MAPS_API_KEY` enables the map view.
 
 ---
 

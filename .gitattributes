@@ -1,0 +1,14 @@
+# Binary files: never convert line endings (it would corrupt them).
+*.pdf  binary
+*.png  binary
+*.jpg  binary
+*.jpeg binary
+*.gif  binary
+*.ico  binary
+*.webp binary
+*.jar  binary
+backend/uploads/** binary
+
+# Shell scripts must keep LF so they run on Linux/macOS and in Docker.
+*.sh   text eol=lf
+mvnw   text eol=lf

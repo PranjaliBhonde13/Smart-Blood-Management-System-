@@ -25,6 +25,7 @@ import com.sben.notification.NotificationService;
 import com.sben.user.Role;
 import com.sben.user.User;
 import com.sben.user.UserRepository;
+import com.sben.notification.email.AccountEmails;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
@@ -57,6 +58,7 @@ public class AdminService {
     private final NotificationService notificationService;
     private final HospitalVerificationService verificationService;
     private final HospitalDocumentRepository documentRepository;
+    private final AccountEmails accountEmails;
 
     @Transactional(readOnly = true)
     public DashboardStats dashboard() {
@@ -105,6 +107,7 @@ public class AdminService {
     public AdminUserResponse setEnabled(Long userId, boolean enabled, Long actorUserId, String reason) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("User", userId));
+        boolean changed = user.isEnabled() != enabled;
         if (!enabled) {
             if (userId.equals(actorUserId)) {
                 throw new BusinessException("You cannot disable your own account");
@@ -121,6 +124,10 @@ public class AdminService {
         }
         user.setEnabled(enabled);
         userRepository.save(user);
+        if (changed) { // the user can no longer sign in to see an in-app notice, so email is how they learn
+            if (enabled) accountEmails.accountRestored(user);
+            else accountEmails.accountSuspended(user, user.getSuspensionReason());
+        }
         auditService.record(enabled ? "USER_ENABLED" : "USER_DISABLED", "User", userId,
                 "Account " + (enabled ? "enabled" : "disabled") + " for " + user.getEmail()
                         + (!enabled && user.getSuspensionReason() != null ? " — reason: " + user.getSuspensionReason() : ""));

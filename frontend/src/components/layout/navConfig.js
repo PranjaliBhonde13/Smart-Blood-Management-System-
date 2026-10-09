@@ -1,6 +1,6 @@
 import {
   LayoutDashboard, PlusCircle, Droplet, MapPin, Heart, ClipboardList,
-  Package, UserRound, Users, ShieldCheck, ScrollText, BarChart3, Siren, TrendingUp, Megaphone, UserCheck,
+  Package, UserRound, Users, ShieldCheck, ScrollText, BarChart3, Siren, TrendingUp, Megaphone, UserCheck, Mail,
 } from 'lucide-react';
 import { ROLE_HOME } from '../../lib/constants';
 
@@ -50,6 +50,7 @@ export function navForRole(role) {
       { label: 'Analytics', to: `${home}/analytics`, icon: TrendingUp },
       { label: 'Broadcast', to: `${home}/broadcast`, icon: Megaphone },
       { label: 'Audit Log', to: `${home}/audit-logs`, icon: ScrollText },
+      { label: 'Email delivery', to: `${home}/emails`, icon: Mail },
       { label: 'Reports', to: `${home}/reports`, icon: BarChart3 },
     ],
   };

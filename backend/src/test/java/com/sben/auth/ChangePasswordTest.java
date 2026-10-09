@@ -6,7 +6,8 @@ import com.sben.auth.token.RefreshToken;
 import com.sben.auth.token.RefreshTokenService;
 import com.sben.auth.token.VerificationTokenRepository;
 import com.sben.common.exception.FieldValidationException;
-import com.sben.notification.EmailService;
+import com.sben.auth.device.LoginDeviceService;
+import com.sben.notification.email.AccountEmails;
 import com.sben.security.JwtService;
 import com.sben.user.Role;
 import com.sben.user.User;
@@ -39,7 +40,8 @@ class ChangePasswordTest {
     @Mock private RefreshTokenService refreshTokenService;
     @Mock private JwtService jwtService;
     @Mock private AuthenticationManager authenticationManager;
-    @Mock private EmailService emailService;
+    @Mock private AccountEmails accountEmails;
+    @Mock private LoginDeviceService loginDevices;
 
     private final PasswordEncoder encoder = new BCryptPasswordEncoder(4);
     private AuthService authService;
@@ -48,7 +50,7 @@ class ChangePasswordTest {
     @BeforeEach
     void setUp() {
         authService = new AuthService(userRepository, verificationTokenRepository, refreshTokenService,
-                encoder, jwtService, authenticationManager, emailService);
+                encoder, jwtService, authenticationManager, accountEmails, loginDevices);
         user = User.builder().id(7L).email("user@sben.com").fullName("User").passwordHash(encoder.encode("Pass@123"))
                 .role(Role.PATIENT).emailVerified(true).enabled(true).build();
         when(userRepository.findById(7L)).thenReturn(Optional.of(user));
@@ -72,7 +74,7 @@ class ChangePasswordTest {
         order.verify(refreshTokenService).issue(7L);
         assertEquals("new-access", res.accessToken());
         assertEquals("new-refresh", res.refreshToken());
-        verify(emailService).send(eq("user@sben.com"), eq("Your password was changed"), anyString());
+        verify(accountEmails).passwordChanged(eq(user), any(), eq(false));
     }
 
     @Test
@@ -93,9 +95,9 @@ class ChangePasswordTest {
     }
 
     @Test
-    void changePassword_StillSucceedsWhenTheNotificationEmailFails() {
-        doThrow(new RuntimeException("SMTP down")).when(emailService).send(anyString(), anyString(), anyString());
-        assertNotNull(authService.changePassword(7L, new ChangePasswordRequest("Pass@123", "N3w-Secret!")));
-        assertTrue(encoder.matches("N3w-Secret!", user.getPasswordHash()));
+    void changePassword_RejectedChange_QueuesNoEmail() {
+        assertThrows(FieldValidationException.class,
+                () -> authService.changePassword(7L, new ChangePasswordRequest("wrong-pass", "N3w-Secret!")));
+        verifyNoInteractions(accountEmails);
     }
 }

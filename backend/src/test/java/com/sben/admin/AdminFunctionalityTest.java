@@ -44,6 +44,7 @@ class AdminFunctionalityTest {
     @Mock private BloodStockRepository stockRepository;
     @Mock private AuditService auditService;
     @Mock private NotificationService notificationService;
+    @Mock private com.sben.notification.email.AccountEmails accountEmails;
     @Mock private HospitalDocumentRepository documentRepository;
     @Mock private HospitalDocumentRequirementRepository requirementRepository;
     @Mock private HospitalDocumentRequestRepository documentRequestRepository;
@@ -63,7 +64,8 @@ class AdminFunctionalityTest {
                 notificationService,
                 new HospitalVerificationService(documentRepository, requirementRepository,
                         documentRequestRepository, HospitalDocumentProperties.defaults()),
-                documentRepository
+                documentRepository,
+                accountEmails
         );
     }
 

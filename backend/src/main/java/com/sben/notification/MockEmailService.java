@@ -37,5 +37,18 @@ public class MockEmailService implements EmailService {
                 │ Body   : {}
                 └───────────────────────────────────────────────────""", to, subject, htmlBody);
     }
+
+    /** Logs the plain-text version (readable in a console; one-time codes appear as-is). */
+    @Override
+    public void deliver(com.sben.notification.email.OutgoingEmail email) {
+        log.info("""
+
+                ┌──────────────── MOCK EMAIL #{} ────────────────
+                │ To     : {}
+                │ Subject: {}
+                │ {}
+                └─────────────────────────────────────────────────""",
+                email.id(), email.to(), email.subject(), email.text().replace("\n", "\n│ "));
+    }
 }
 

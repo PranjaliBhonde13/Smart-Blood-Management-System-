@@ -1,24 +1,25 @@
-# ===== Backend (Maven / Java) =====
+# Only generated files, downloaded dependencies and local secrets are ignored.
+# Everything else is committed, so a fresh clone runs without any setup changes.
+
+# ===== Dependencies & build output (recreated by npm install / mvnw) =====
+frontend/node_modules/
+frontend/dist/
+frontend/.vite/
 backend/target/
 *.class
 *.jar
 !**/maven-wrapper.jar
-.mvn/wrapper/maven-wrapper.jar
 
-# ===== Frontend (Node / Vite) =====
-frontend/node_modules/
-frontend/dist/
-frontend/.vite/
-npm-debug.log*
-
-# ===== Uploaded files (medical reports) =====
-uploads/
-backend/uploads/
-
-# ===== Env / secrets =====
+# ===== Local secrets (real SMTP password, API keys) =====
+# Never commit these: this repository is public. The app runs without them
+# (see README); copy backend/.env.example to backend/.env for real email.
 .env
 .env.local
 *.local
+
+# ===== Logs =====
+*.log
+npm-debug.log*
 
 # ===== IDE / OS =====
 .idea/
